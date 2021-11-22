@@ -6,7 +6,6 @@
 </template>
 
 <script>
-import { setupSVG } from '~/src/svg.helper.js';
 
 const d3 = require('d3');
 
