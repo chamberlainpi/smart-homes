@@ -1,0 +1,1 @@
+globalThis.trace = console.log.bind(this);
