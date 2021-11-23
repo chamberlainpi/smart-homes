@@ -38,7 +38,7 @@ app.get('/test', (req, res, next) => {
     res.end(`Testing`);
 });
 
-app.get('/wattage/readings/:offset?', async (req, res, next) => {
+app.get('/readings/:offset?', async (req, res, next) => {
     const offset = parseInt(req.params.offset ?? 0);
     if(isNaN(offset) || offset < 0) {
         return sendError(res, {
@@ -48,10 +48,24 @@ app.get('/wattage/readings/:offset?', async (req, res, next) => {
     }
 
     logNow("Reading offset: " + offset);
-    const result = await db.query(`SELECT * FROM readings LIMIT ${WATTAGE_READING.LIMIT_PER_QUERY} OFFSET ${offset}`);
-    const { rows } = result;
+    const { rows } = await db.query(`SELECT * FROM readings LIMIT ${WATTAGE_READING.LIMIT_PER_QUERY} OFFSET ${offset}`);
 
     res.json(rows);
+});
+
+app.get('/filters', async (req, res, next) => {
+    const getDistinct = async distinctField => {
+        logNow(`>>> ${distinctField}`);
+        const { rows } = await db.query(`SELECT DISTINCT "${distinctField}" FROM readings LIMIT ${WATTAGE_READING.LIMIT_SERIAL_NUMBERS}`);
+        logNow(`  < ${distinctField}`);
+
+        return rows.map( r => r[distinctField] );
+    }
+    
+    const serialNumbers = await getDistinct('Serial_Number');
+    const deviceIds = await getDistinct('Device_ID');
+
+    res.json( {dateRequested: new Date(), serialNumbers, deviceIds} );
 });
 
 export default { path: '/api', handler: app };

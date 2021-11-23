@@ -31,8 +31,6 @@ export default Vue.extend({
     entries: [],
     offset: 0,
     isBusy: false,
-    uniqSerials: new Set(),
-    uniqDeviceIDs: new Set()
   }),
 
   methods: {
@@ -45,26 +43,28 @@ export default Vue.extend({
       this.fetchWattageReadings();
     },
 
+    async fetchSerialsAndDeviceIDs() {
+      const filters = await fetch('./api/filters').then( res => res.json() );
+      const { serialNumbers, deviceIds } = filters;
+
+      trace("Serials Numbers: ", serialNumbers);
+      trace("Device IDs: ", deviceIds);
+    },
+
     async fetchWattageReadings() {
       if(this.isBusy) return;
 
       this.isBusy = true;
-      const wattageReadings = await fetch('./api/wattage/readings/' + this.offset).then( res => res.json() );
+      const wattageReadings = await fetch('./api/readings/' + this.offset).then( res => res.json() );
       
       this.entries = wattageReadings;
-
-      for(var reading of wattageReadings) {
-        this.uniqSerials.add( reading.Serial_Number );
-        this.uniqDeviceIDs.add( reading.Device_ID );
-      }
-
-      trace("Serials:", this.uniqSerials, "Device IDs:", this.uniqDeviceIDs);
 
       this.isBusy = false;
     }
   },
 
   mounted() {
+    this.fetchSerialsAndDeviceIDs();
     this.fetchWattageReadings();
   }
 })
