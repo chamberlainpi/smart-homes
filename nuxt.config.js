@@ -1,3 +1,5 @@
+
+
 export default {
   // Global page headers: https://go.nuxtjs.dev/config-head
   head: {
@@ -36,6 +38,10 @@ export default {
     '@nuxtjs/axios',
     // https://go.nuxtjs.dev/pwa
     '@nuxtjs/pwa',
+  ],
+
+  serverMiddleware: [
+    '@/src/middleware/rest-api'
   ],
 
   // Axios module configuration: https://go.nuxtjs.dev/config-axios
