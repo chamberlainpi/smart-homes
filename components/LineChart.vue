@@ -62,8 +62,6 @@ export default {
             const y = parseFloat(entry.Wattage);
             
             this.addLine([x, 0], [x, y], 'red');
-
-            // this.addLine([10, 20], [100, 150], 'red');
         }
     },
 }

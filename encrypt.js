@@ -8,5 +8,6 @@ import fs from 'fs/promises';
 
     const encDataPath = './src/creds.json.dat';
     await fs.writeFile(encDataPath, encData);
+    
     trace('DB data encrypted to: ', encDataPath);
 })();

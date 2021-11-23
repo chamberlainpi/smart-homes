@@ -20,14 +20,12 @@ export default Vue.extend({
   methods: {
     async getData() {
       const wattageReadings = await fetch('./api/wattage/readings').then( res => res.json() );
-      trace("Got the data: ", wattageReadings);
-
+      
       this.entries = wattageReadings;
     }
   },
 
   mounted() {
-    trace("MOUNTED APP!");
     this.getData();
     
   }

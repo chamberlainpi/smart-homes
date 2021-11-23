@@ -38,8 +38,6 @@ app.get('/wattage/readings', async (req, res, next) => {
     const result = await db.query('SELECT * FROM readings LIMIT 10');
     const { rows } = result;
 
-    trace(rows);
-
     res.json(rows);
 })
 

@@ -17,10 +17,6 @@ export const db = {
 
         db.client = new Client( creds );
         db.client.connect();
-
-        const res = await db.query('SELECT NOW()');
-
-        trace("Postgre response = ", res.rows[0]);
     
         db.isConnected = true;
     },
