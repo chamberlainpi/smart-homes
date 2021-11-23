@@ -11,14 +11,15 @@ export default Vue.extend({
   components: { LineChart },
 
   methods: {
-    getData() {
-
+    async getData() {
+      const wattageReadings = await fetch('./api/wattage/readings').then( res => res.json() );
+      trace("Got the data: ", wattageReadings);
     }
   },
-  
+
   mounted() {
     trace("MOUNTED APP!");
-
+    this.getData();
     
   }
 })

@@ -15,26 +15,25 @@ export const db = {
     
         trace("Hello in async SERVER side", db.creds);
 
-        const client = db.client = new Client( creds );
+        db.client = new Client( creds );
+        db.client.connect();
 
-        client.connect();
+        const res = await db.query('SELECT NOW()');
 
-        const response = await db.query('SELECT NOW()');
-
-        trace("Postgre response = ", response);
+        trace("Postgre response = ", res.rows[0]);
     
-        db.isConnected = true; //
+        db.isConnected = true;
     },
 
     query(statement) {
         const { client } = db;
 
         return new Promise((_then, _catch) => {
+            
             client.query(statement, (err, res) => {
                 if(err) return _catch(err);
                 
                 _then(res);
-                client.end();
             });
         })
     }

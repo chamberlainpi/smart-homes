@@ -11,14 +11,13 @@ app.get('/', (req, res) => {
     res.status(404).end('The API needs to be accessed via its nested routes!');
 });
 
-app.all('/*', (req, res, next) => {
+app.all('/*', async (req, res, next) => {
     const __ = req.__ = {}; //Toss any private data here;
         
     __.dateRequested = new Date().toISOString();
 
     if(!db.isConnected) {
-        db.connect();
-        return res.end(`${__.dateRequested} - Not connected to DB yet, try again!`);
+        await db.connect();
     }
     
     if(db.numRequests === 0) {
@@ -33,6 +32,15 @@ app.all('/*', (req, res, next) => {
 app.get('/test', (req, res, next) => {
     trace("GET - /test was called");
     res.end(`${req.__.dateRequested} - Testing 123 ...`);
+});
+
+app.get('/wattage/readings', async (req, res, next) => {
+    const result = await db.query('SELECT * FROM readings LIMIT 10');
+    const { rows } = result;
+
+    trace(rows);
+
+    res.json(rows);
 })
 
 export default { path: '/api', handler: app };
