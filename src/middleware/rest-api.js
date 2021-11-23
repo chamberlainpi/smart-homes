@@ -48,7 +48,7 @@ app.get('/readings/:offset?', async (req, res, next) => {
     }
 
     logNow("Reading offset: " + offset);
-    const { rows } = await db.query(`SELECT * FROM readings LIMIT ${WATTAGE_READING.LIMIT_PER_QUERY} OFFSET ${offset}`);
+    const { rows } = await db.query(`SELECT * FROM readings ORDER BY "DateTime" LIMIT ${WATTAGE_READING.LIMIT_PER_QUERY} OFFSET ${offset}`);
 
     res.json(rows);
 });
