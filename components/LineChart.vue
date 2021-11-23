@@ -14,7 +14,8 @@ let INSTANCE_ID = 1;
 export default {
     props: {
         width: Number,
-        height: Number
+        height: Number,
+        entries: Array,
     },
 
     data: () => ({
@@ -52,7 +53,18 @@ export default {
 
     mounted() {
         this.svg = d3.select( '.' + this.svgClassName );
-        this.addLine([10, 20], [100, 150], 'red');
+        
+        for(var e in this.entries) {
+            var entry = this.entries[e];
+            trace(e, entry);
+
+            const x = 2 + e * 10;
+            const y = parseFloat(entry.Wattage);
+            
+            this.addLine([x, 0], [x, y], 'red');
+
+            // this.addLine([10, 20], [100, 150], 'red');
+        }
     },
 }
 </script>
