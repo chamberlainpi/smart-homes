@@ -1,6 +1,6 @@
 <template>
     <div>
-        <h1>Testing {{instanceID}}</h1>
+        <h1>Testing {{instanceID}} rendered: {{numRenders}}</h1>
         <svg :class="svgClassName" :width="width" :height="height"></svg>
     </div>
 </template>
@@ -20,8 +20,15 @@ export default {
 
     data: () => ({
         instanceID: INSTANCE_ID++,
+        numRenders: 0,
         svg: null
     }),
+
+    watch: {
+        entries() {
+            this.redraw();
+        }
+    },
 
     computed: {
         svgClassName() {
@@ -41,28 +48,36 @@ export default {
               .attr('x2', x2)
               .attr('y2', y2)
               .attr('stroke', color);
-        }
-    },
+        },
 
-    beforeDestroy() {
-        if(this.svg) {
-            this.svg.remove();
+        redraw() {
+            this.clearSVG();
+            this.svg = d3.select( '.' + this.svgClassName );
+            this.numRenders++;
+            
+            for(var e in this.entries) {
+                var entry = this.entries[e];
+
+                const x = 2 + e * 10;
+                const y = parseFloat(entry.Wattage);
+                
+                this.addLine([x, 0], [x, y], 'red');
+            }
+        },
+
+        clearSVG() {
+            if(!this.svg) return;
+            this.svg.selectAll('*').remove();
             this.svg = null;
         }
     },
 
-    mounted() {
-        this.svg = d3.select( '.' + this.svgClassName );
-        
-        for(var e in this.entries) {
-            var entry = this.entries[e];
-            trace(e, entry);
+    beforeDestroy() {
+        this.clearSVG();
+    },
 
-            const x = 2 + e * 10;
-            const y = parseFloat(entry.Wattage);
-            
-            this.addLine([x, 0], [x, y], 'red');
-        }
+    mounted() {
+        this.redraw();
     },
 }
 </script>

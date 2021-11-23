@@ -5,15 +5,13 @@ import { query } from 'express';
 
 export const db = {
     isConnected: false,
-    numRequests: 0,
+    numQueries: 0,
     creds: null,
     client: null,
 
     async connect() {
         const credsEncoded = await fs.readFile('./src/creds.json.dat', 'utf8');
         const creds = db.creds = JSON.parse( atob(credsEncoded) );
-    
-        trace("Hello in async SERVER side", db.creds);
 
         db.client = new Client( creds );
         db.client.connect();
@@ -23,6 +21,8 @@ export const db = {
 
     query(statement) {
         const { client } = db;
+
+        db.numQueries++;
 
         return new Promise((_then, _catch) => {
             
