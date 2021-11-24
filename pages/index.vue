@@ -1,40 +1,39 @@
 <template>
-  <div class="flex flex-row">
+  <div id="main-wrapper" class="flex flex-col">
+    <div id="header-bar" class="hbox bg-gray-400">
+      <img src="@/static/icon.png" class="h-10">
+      <h1 class="text-shadow-sm text-shadow-white D">Smart-Homes: <i class="font-normal whitespace-nowrap">Wattage Readings</i></h1>
+    </div>
     
-    <img src="@/static/icon.png" width="40px">
+    <div id="content-wrapper" class="p-2">
+      <div id="filter-controls" class="mb-3 grid grid-cols-1 desk:grid-cols-3 gap-3">
+        <h3 class="hbox">Filters:
+          <button class="btn whitespace-nowrap text-sm"
+            v-show="isUsingFilters"
+            @click="onClearFilters"><i class="fa fa-times mr-2"></i>Clear Filters</button>
+        </h3>
 
-    <div>
-      <label>Offset: {{offset}}</label>
-      <input class="slider" type="range" min="0" max="1000" v-model.number="offset" @change="onOffsetChanged">
-      <button @click="changeOffset(1)">+</button>
-      <button @click="changeOffset(-1)">-</button>
+        <FilterDropDown label="Serial Number:" countField="Serial_Number"
+          :countInArray="wattageReadings" :options="serialNumbers" v-model="filterSerialNumber" />
+
+        <FilterDropDown label="Device ID:" countField="Device_ID"
+          :countInArray="wattageReadings" :options="deviceIds" v-model="filterDeviceID" />
+      </div> 
+
+      <div id="offset-controls" class="mb-3 hbox">
+        <label class="inline-block w-24">Offset: {{offset}}</label>
+        <input class="slider" type="range" min="0" max="1000" v-model.number="offset" @change="onOffsetChanged">
+        <button class="btn btn-sm fa fa-plus" @click="changeOffset(1)"></button>
+        <button class="btn btn-sm fa fa-minus" @click="changeOffset(-1)"></button>
+      </div>
+
+      <LineChart class="border border-gray-300"
+        :width="300"
+        :height="400"
+        :entries="filteredReadings"
+        :itemRenderer="onLineChartItemRender">
+      </LineChart>
     </div>
-
-    <div>
-      <h3>Filters:
-        <button v-show="isUsingFilters" @click="filterSerialNumber = filterDeviceID = null">Clear Filters</button>
-      </h3>
-      <span>Serial Number:
-        <v-select :options="serialNumbers" v-model="filterSerialNumber">
-          <template v-slot:option="serial">
-            <CountedItem :count="countReadings(serial.label, 'Serial_Number')" :label="serial.label" />
-          </template>
-        </v-select>
-      </span>
-      <span>Device ID:
-        <v-select :options="deviceIds" v-model="filterDeviceID">
-          <template v-slot:option="device">
-            <CountedItem :count="countReadings(device.label, 'Device_ID')" :label="device.label" />
-          </template>
-        </v-select>
-      </span>
-    </div>
-
-    <LineChart 
-      :width="300"
-      :height="400"
-      :entries="filteredReadings">
-    </LineChart>
 
   </div>
 </template>
@@ -44,15 +43,18 @@ import '@/src/extensions';
 import Vue from 'vue';
 import LineChart from '~/components/LineChart.vue';
 import CountedItem from '~/components/CountedItem.vue';
-import vSelect from 'vue-select';
-import 'vue-select/dist/vue-select.css';
+import FilterDropDown from '~/components/FilterDropDown.vue';
 import _debounce from 'lodash/debounce';
 import _forOwn from 'lodash/forOwn';
-
-globalThis.Vue = Vue;
+import { getCountSortFunc, clamp } from '@/src/utils';
+import 'vue-select/dist/vue-select.css';
 
 export default Vue.extend({
-  components: { LineChart, CountedItem, vSelect },
+  components: {
+    LineChart,
+    CountedItem,
+    FilterDropDown,
+  },
 
   data: () => ({
     wattageReadings: [],
@@ -87,30 +89,27 @@ export default Vue.extend({
   },
 
   watch: {
-    filterSerialNumber() {
-      this._fetchWattageReadings();
-    },
-
-    filterDeviceID() {
+    isUsingFilters() {
       this._fetchWattageReadings();
     },
   },
 
   methods: {
-    countReadings(query, field) {
-      return this.wattageReadings.filter( r => r[field] === query ).length;
-    },
-
     changeOffset(byAmount) {
       this.offset += byAmount;
 
-      this.offset = this.offset < 0 ? 0 : (this.offset > 9999 ? 9999 : this.offset);
+      this.offset = clamp(this.offset, 0, 9999);
 
       this._fetchWattageReadings();
     },
 
     onOffsetChanged() {
       this._fetchWattageReadings();
+    },
+
+    onClearFilters() {
+      this.filterSerialNumber = null;
+      this.filterDeviceID = null;
     },
 
     async fetchSerialsAndDeviceIDs() {
@@ -151,23 +150,19 @@ export default Vue.extend({
       return organized;
     },
 
+    onLineChartItemRender(item, {x, y}) {
+      trace(item, x, y);
+    }
   },
 
   mounted() {
-    const getCountSortFunc = field => (a, b) => {
-      const countA = this.countReadings(a, field);
-      const countB = this.countReadings(b, field);
-      return countB - countA;
-    };
+    //Store a "debounced" copy of the fetch method to avoid spamming requests:
+    this._fetchWattageReadings = _debounce(() => this.fetchWattageReadings(), 100);
+    this._countSortBySerialNumber = getCountSortFunc(this.wattageReadings, 'Serial_Number');
+    this._countSortByDeviceIDs = getCountSortFunc(this.wattageReadings, 'Device_ID');
     
-    this._countSortBySerialNumber = getCountSortFunc('Serial_Number');
-    this._countSortByDeviceIDs = getCountSortFunc('Device_ID');
-
     this.fetchSerialsAndDeviceIDs();
     this.fetchWattageReadings();
-
-    //Store a "debounced" copy of the fetch method to do updates as needed:
-    this._fetchWattageReadings = _debounce(() => this.fetchWattageReadings(), 100);
   }
 })
 </script>

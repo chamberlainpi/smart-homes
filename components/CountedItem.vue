@@ -1,7 +1,7 @@
 <template>
-    <span class="monospace"
-        :style="{'font-weight': count > 0 ? 'bold' : 'normal'}">
-        {{label + (count > 0 ? ` (${count})` : '')}}
+    <span class="font-mono"
+        :class="{'font-bold': hasItems}">
+        {{label + countStr}}
     </span>
 </template>
 
@@ -10,6 +10,15 @@ export default {
     props: {
         count: Number,
         label: String
+    },
+
+    computed: {
+        hasItems() {
+            return this.count > 0;
+        },
+        countStr() {
+            return this.hasItems ? ` (${this.count})` : '';
+        }
     }
 }
 </script>

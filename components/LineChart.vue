@@ -1,6 +1,5 @@
 <template>
     <div>
-        <h1>Testing {{instanceID}} rendered: {{numRenders}}</h1>
         <svg :class="svgClassName" :width="width" :height="height"></svg>
     </div>
 </template>
@@ -16,11 +15,11 @@ export default {
         width: Number,
         height: Number,
         entries: Array,
+        itemRenderer: Function
     },
 
     data: () => ({
         instanceID: INSTANCE_ID++,
-        numRenders: 0,
         svg: null
     }),
 
@@ -53,15 +52,18 @@ export default {
         redraw() {
             this.clearSVG();
             this.svg = d3.select( '.' + this.svgClassName );
-            this.numRenders++;
             
             for(var e in this.entries) {
                 var entry = this.entries[e];
 
                 const x = 2 + e * 10;
-                const y = parseFloat(entry.Wattage);
+                const y = this.height - parseFloat(entry.Wattage);
                 
-                this.addLine([x, 0], [x, y], 'red');
+                this.addLine([x, this.height], [x, y], 'red');
+
+                if(this.itemRenderer) {
+                    this.itemRenderer(entry, {x, y});
+                }
             }
         },
 
