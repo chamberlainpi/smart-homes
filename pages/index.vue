@@ -47,6 +47,7 @@ import LineChart from '~/components/LineChart.vue';
 import CountedItem from '~/components/CountedItem.vue';
 import FilterDropDown from '~/components/FilterDropDown.vue';
 import { getCountSortFunc, clamp, _ } from '@/src/utils';
+import { organizeReadings, parseSimplifiedWattageData } from '@/src/wattage.utils';
 import 'vue-select/dist/vue-select.css';
 
 export default Vue.extend({
@@ -60,6 +61,7 @@ export default Vue.extend({
     wattageReadings: [],
     serialNumbers: [],
     deviceIds: [],
+    dateLimits: {min: null, max: null},
     offset: 0,
     filterSerialNumber: null,
     filterDeviceID: null,
@@ -72,7 +74,11 @@ export default Vue.extend({
     },
 
     filteredReadings() {
-      const organized = this.organizeReadingsPerDevice( this.wattageReadings );
+      const organized = organizeReadings( this.wattageReadings );
+
+      //Sort the filters for Serial_Number and Device_ID by # of hits [their total numbers in (#) parentheses]
+      this.serialNumbers = this.serialNumbers.sort( this._countSortBySerialNumber );
+      this.deviceIds = this.deviceIds.sort( this._countSortByDeviceIDs );
 
       let filtered = this.wattageReadings;
 
@@ -114,10 +120,11 @@ export default Vue.extend({
 
     async fetchSerialsAndDeviceIDs() {
       const filters = await fetch('./api/filters').then( res => res.json() );
-      const { serialNumbers, deviceIds } = filters;
+      const { dateLimits, serialNumbers, deviceIds } = filters;
 
       this.serialNumbers = serialNumbers;
       this.deviceIds = deviceIds;
+      this.dateLimits = dateLimits;
     },
 
     async fetchWattageReadings() {
@@ -130,28 +137,7 @@ export default Vue.extend({
       this.isBusy = false;
     },
 
-    organizeReadingsPerDevice( readings ) {
-      const organized = { Serial_Number: {}, Device_ID: {} };
-
-      /**
-       * Catalogs all readings into their respective Serial_Number & Device_ID.
-       * Example:
-       *   organized.Serial_Number.XYZ123[0] == (1 reading)
-       */
-      _.forOwn(organized, (obj, field) => {
-        for(var reading of readings) {
-          const value = reading[field];
-          if(!(value in obj)) obj[value] = [];
-          obj[value].push( reading );
-        }
-      });
-
-      //Sort the filters for Serial_Number and Device_ID by # of hits [their total numbers in (#) parentheses]
-      this.serialNumbers = this.serialNumbers.sort( this._countSortBySerialNumber );
-      this.deviceIds = this.deviceIds.sort( this._countSortByDeviceIDs );
-
-      return organized;
-    },
+    
 
     onLineChartItemRender(item, {x, y}) {
       trace(item, x, y);
@@ -161,8 +147,8 @@ export default Vue.extend({
   mounted() {
     //Store a "debounced" copy of the fetch method to avoid spamming requests:
     this._fetchWattageReadings = _.debounce(() => this.fetchWattageReadings(), 100);
-    this._countSortBySerialNumber = getCountSortFunc(this.wattageReadings, 'Serial_Number');
-    this._countSortByDeviceIDs = getCountSortFunc(this.wattageReadings, 'Device_ID');
+    this._countSortBySerialNumber = getCountSortFunc(() => this.wattageReadings, 'Serial_Number');
+    this._countSortByDeviceIDs = getCountSortFunc(() => this.wattageReadings, 'Device_ID');
     
     this.fetchSerialsAndDeviceIDs();
     this.fetchWattageReadings();

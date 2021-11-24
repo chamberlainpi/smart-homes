@@ -12,7 +12,8 @@ export const countItems = (arr, query, field) => {
     return arr.filter( r => r[field] === query ).length;
 }
 
-export const getCountSortFunc = (arr, field) => (a, b) => {
+export const getCountSortFunc = (arrGetter, field) => (a, b) => {
+    const arr = arrGetter();
     const countA = countItems(arr, a, field);
     const countB = countItems(arr, b, field);
     return countB - countA;
