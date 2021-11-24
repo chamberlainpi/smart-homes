@@ -21,10 +21,11 @@
       </div> 
 
       <div id="offset-controls" class="mb-3 hbox">
-        <label class="inline-block w-24">Offset: {{offset}}</label>
-        <input class="slider" type="range" min="0" max="1000" v-model.number="offset" @change="onOffsetChanged">
+        <span class="inline-block">Offset:</span>
+        <input class="slider" type="range" min="0" :max="offsetDayRange" v-model.number="offset" @change="onOffsetChanged">
         <button class="btn btn-sm fa fa-plus" @click="changeOffset(1)"></button>
         <button class="btn btn-sm fa fa-minus" @click="changeOffset(-1)"></button>
+        <span>{{offsetDayCurrent}}</span>
       </div>
 
       <LineChart class="border border-gray-300"
@@ -42,6 +43,7 @@
 
 <script>
 import '@/src/extensions';
+import dayjs from 'dayjs';
 import Vue from 'vue';
 import LineChart from '~/components/LineChart.vue';
 import CountedItem from '~/components/CountedItem.vue';
@@ -91,6 +93,14 @@ export default Vue.extend({
       }
 
       return filtered;
+    },
+
+    offsetDayCurrent() {
+      return dayjs(this.dateLimits.min).add(this.offset, 'day').format('YYYY-MM-DD');
+    },
+
+    offsetDayRange() {
+      return dayjs(this.dateLimits.max).diff(this.dateLimits.min, 'day');
     }
   },
 
@@ -132,12 +142,12 @@ export default Vue.extend({
 
       this.isBusy = true;
       
-      this.wattageReadings = await fetch('./api/readings/' + this.offset).then( res => res.json() );
-
+      const wattageData = await fetch('./api/readings/' + this.offset).then( res => res.json() );
+      
+      this.wattageReadings = parseSimplifiedWattageData( wattageData );
+      
       this.isBusy = false;
     },
-
-    
 
     onLineChartItemRender(item, {x, y}) {
       trace(item, x, y);

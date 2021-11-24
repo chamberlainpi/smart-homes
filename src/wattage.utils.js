@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { _ } from './utils';
 
 export function organizeReadings( readings ) {
@@ -21,10 +22,32 @@ export function organizeReadings( readings ) {
 
 
 export function parseSimplifiedWattageData( wattageData ) {
-    const readings = [];
+    console.clear();
+    
+    const { keys: keysPiped, values: valuesPiped } = wattageData;
+    
+    const dateRegex = /^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/g;
+    
+    const castData = d => {
+        if(!d || !d.length) return null;
+        // if(dateRegex.test(d)) return new Date(d);
+        return d;
+    }
+
+    const keys = keysPiped.split('|');
+    const readings = valuesPiped.map( vPiped => {
+        const reading = {};
+        const vSplit = vPiped.split('|');
+        for(var k in keys) {
+            const key = keys[k];
+            reading[key] = castData(vSplit[k]);
+        }
+        return reading;
+    });
+
     
     //Parse the data based on supplied *keys* and *values* that are pipe-delimited.
-    //////////// TODO 
+    trace(readings.length, readings[0]);
 
     return readings;
 }

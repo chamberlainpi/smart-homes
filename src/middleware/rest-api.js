@@ -53,6 +53,8 @@ app.get('/total', async (req, res, next) => {
 });
 
 app.get('/readings/:offset?', async (req, res, next) => {
+    const { __ } = req;
+    
     const offset = parseInt(req.params.offset ?? 0);
     if(isNaN(offset) || offset < 0) {
         return sendError(res, {
@@ -64,7 +66,13 @@ app.get('/readings/:offset?', async (req, res, next) => {
     logNow("Reading offset: " + offset);
     const { rows } = await db.query(`SELECT * FROM readings ORDER BY "DateTime" LIMIT ${WATTAGE_READING.LIMIT_PER_QUERY} OFFSET ${offset}`);
 
-    res.json(rows);
+    __.timeDiff = MILLIS() - __.timeStart;
+    const simplified = simplifyWattageData(rows);
+
+    sendPretty(res, {
+        timeToQueryMS: __.timeDiff,
+        ... simplified
+    });
 });
 
 app.get('/readings/date/:dateStart', async (req, res, next) => {
