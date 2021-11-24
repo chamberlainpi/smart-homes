@@ -28,10 +28,12 @@
       </div>
 
       <LineChart class="border border-gray-300"
-        :width="300"
-        :height="400"
+        width="100%"
+        height="400"
         :entries="filteredReadings"
-        :itemRenderer="onLineChartItemRender">
+        :itemRenderer="onLineChartItemRender"
+        :xAxis="{label: 'Time', compareFunc: d => new Date(d.DateTime) }"
+        :yAxis="{label: 'Wattage', compareFunc: d => d.Wattage }">
       </LineChart>
     </div>
 
@@ -44,9 +46,7 @@ import Vue from 'vue';
 import LineChart from '~/components/LineChart.vue';
 import CountedItem from '~/components/CountedItem.vue';
 import FilterDropDown from '~/components/FilterDropDown.vue';
-import _debounce from 'lodash/debounce';
-import _forOwn from 'lodash/forOwn';
-import { getCountSortFunc, clamp } from '@/src/utils';
+import { getCountSortFunc, clamp, _ } from '@/src/utils';
 import 'vue-select/dist/vue-select.css';
 
 export default Vue.extend({
@@ -131,12 +131,14 @@ export default Vue.extend({
     },
 
     organizeReadingsPerDevice( readings ) {
-      const organized = {
-        Serial_Number: {},
-        Device_ID: {},
-      }
+      const organized = { Serial_Number: {}, Device_ID: {} };
 
-      _forOwn(organized, (obj, field) => {
+      /**
+       * Catalogs all readings into their respective Serial_Number & Device_ID.
+       * Example:
+       *   organized.Serial_Number.XYZ123[0] == (1 reading)
+       */
+      _.forOwn(organized, (obj, field) => {
         for(var reading of readings) {
           const value = reading[field];
           if(!(value in obj)) obj[value] = [];
@@ -144,6 +146,7 @@ export default Vue.extend({
         }
       });
 
+      //Sort the filters for Serial_Number and Device_ID by # of hits [their total numbers in (#) parentheses]
       this.serialNumbers = this.serialNumbers.sort( this._countSortBySerialNumber );
       this.deviceIds = this.deviceIds.sort( this._countSortByDeviceIDs );
 
@@ -157,7 +160,7 @@ export default Vue.extend({
 
   mounted() {
     //Store a "debounced" copy of the fetch method to avoid spamming requests:
-    this._fetchWattageReadings = _debounce(() => this.fetchWattageReadings(), 100);
+    this._fetchWattageReadings = _.debounce(() => this.fetchWattageReadings(), 100);
     this._countSortBySerialNumber = getCountSortFunc(this.wattageReadings, 'Serial_Number');
     this._countSortByDeviceIDs = getCountSortFunc(this.wattageReadings, 'Device_ID');
     
