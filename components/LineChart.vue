@@ -1,12 +1,15 @@
 <template>
     <div class="line-chart" :style="{width, height}">
-        <canvas ref="canvas" width="100%" height="100%"></canvas>
+        <canvas ref="canvas"></canvas>
     </div>
 </template>
 
 <script>
 import { _, defer } from '@/src/utils';
 import { createPixiApp } from '@/src/utils.pixi';
+
+const gap = 30;
+const deg2rad = Math.PI / 180;
 
 export default {
     props: {
@@ -43,7 +46,7 @@ export default {
                 resizeTo: $el
             });
 
-            // this.pixi.test();
+            this.initGuides();
         },
 
         clearCanvas() {
@@ -52,19 +55,39 @@ export default {
         },
 
         redraw() {
-            this.clearCanvas();
-            
             this.drawGuides();
             this.drawEntries();
         },
 
-        async drawGuides() {
-            const {xAxis, yAxis, entries} = this;
+        initGuides() {
+            const {xAxis, yAxis, entries, pixi} = this;
             const w = this.$el.offsetWidth;
             const h = this.$el.offsetHeight;
-            const gap = 20;
-
             
+            const guideUI = this.guideUI = {};
+            guideUI.group = pixi.createContainer(() => {
+                guideUI.g = pixi.drawGraphic();
+                guideUI.xLabel = pixi.drawLabel(xAxis.label);
+                guideUI.yLabel = pixi.drawLabel(yAxis.label);
+                guideUI.yLabel.rotation = -90 * deg2rad;
+            });
+        },
+
+        async drawGuides() {
+            const {xAxis, yAxis, entries, pixi} = this;
+            const w = this.$el.offsetWidth;
+            const h = this.$el.offsetHeight;
+
+            const { guideUI } = this;
+            const { g, xLabel, yLabel } = guideUI;
+            g.clear();
+            pixi.drawLine(g, gap, 0, gap, h-gap, 0x000000);
+            pixi.drawLine(g, gap, h-gap, w, h-gap, 0x000000);
+            xLabel.x = w/2;
+            xLabel.y = h-gap/2;
+
+            yLabel.x = 2;
+            yLabel.y = h/2;
         },
 
         drawEntries() {
@@ -73,7 +96,7 @@ export default {
                 var entry = this.entries[e];
 
                 if(--limit < 0) break;
-                trace("Entry: ", e, entry);
+                // trace("Entry: ", e, entry);
 
                 const x = 2 + e * 10;
                 const y = this.height - parseFloat(entry.Wattage);

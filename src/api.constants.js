@@ -1,6 +1,6 @@
 export default {
     WATTAGE_READING: {
-        LIMIT_PER_QUERY: 1000,
+        LIMIT_PER_QUERY: 100,
         LIMIT_DAYS_RANGE: 1,
         LIMIT_SERIAL_NUMBERS: 9999,
         LIMIT_DEVICE_IDS: 9999,

@@ -140,7 +140,12 @@ export default Vue.extend({
 
       this.isBusy = true;
 
-      const wattageData = await fetch('./api/readings/date/' + this.offsetDayCurrent).then( res => res.json() );
+      const ENDPOINTS = {
+        TEST: './api/readings/0',
+        PROD: './api/readings/date/' + this.offsetDayCurrent
+      };
+      
+      const wattageData = await fetch(ENDPOINTS.TEST).then( res => res.json() );
       this.wattageReadings = await parseSimplifiedWattageData( wattageData );
 
       //Sort the filters for Serial_Number and Device_ID by # of hits [their total numbers in (#) parentheses]
