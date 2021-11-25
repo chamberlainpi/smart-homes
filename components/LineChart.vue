@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import { _, defer } from '@/src/utils';
+import { _, defer, clamp } from '@/src/utils';
 import { createPixiApp } from '@/src/utils.pixi';
 
 const gap = {x: 50, y: 80};
@@ -16,7 +16,6 @@ export default {
         width: String,
         height: String,
         entries: Array,
-        itemRenderer: Function,
         xAxis: Object,
         yAxis: Object,
         xBounds: Array,
@@ -45,7 +44,8 @@ export default {
             this.pixi = createPixiApp({
                 view: this.canvas,
                 backgroundColor: 0xffffff,
-                resizeTo: $el
+                resizeTo: $el,
+                onMouseMove: mouseXY => this.onMouseMove(mouseXY)
             });
 
             this.initGuides();
@@ -56,9 +56,12 @@ export default {
             this.pixi.clear();
         },
 
-        redraw() {
-            this.adjustGuides();
-            this.adjustEntries();
+        async updateChart(skipInit=false) {
+            !skipInit && this.initEntries();
+
+            await this.adjustGuides();
+            await this.adjustEntries();
+            this.onMouseMove(null);
         },
 
         initGuides() {
@@ -98,9 +101,10 @@ export default {
                 if(xTicks[xData]) continue;
 
                 const tick = xTicks[xData] = pixi.createContainer(tick => {
-                    tick._label = pixi.drawLabel(xTickRender(xData), 0, 10, {fontSize: xAxis.size || 20});
+                    tick._label = pixi.drawLabel(xTickRender(xData), 0, 0, {fontSize: xAxis.size || 12});
+                    tick._label.pivot.y = -10;
                     tick._label.pivot.x = (tick._label.width * .5) | 0;
-                    tick._line = pixi.drawGraphic(g => pixi.drawLine(g, 0, 0, 0, 10));
+                    tick._line = pixi.drawGraphic(g => pixi.drawLine(g, 0, 0, 0, 10, 0x0, 1));
                     tick._entries = pixi.drawGraphic();
                 });
 
@@ -117,15 +121,7 @@ export default {
             const h = this.$el.offsetHeight;
 
             const { guideUI } = this;
-            const { g, xLabel, yLabel } = guideUI;
-            g.clear();
-            pixi.drawLine(g, gap.x, 0, gap.x, h-gap.y, 0x000000);
-            pixi.drawLine(g, gap.x, h-gap.y, w, h-gap.y, 0x000000);
-            xLabel.x = w/2;
-            xLabel.y = h-gap.y/2;
-
-            yLabel.x = 2;
-            yLabel.y = h/2;
+            this.drawMainGuides();
 
             xAxis.boundsPixels = [gap.x, w];
             yAxis.boundsPixels = [h-gap.y, 0];
@@ -137,92 +133,117 @@ export default {
                 const diff = max - min;
                 const diffPixels = maxPX - minPX;
                 
-                axis.plot = v => {
+                return v => {
                     const value = evaluate(v);
                     const ratio = (value - min) / diff;
                     return minPX + ratio * diffPixels;
                 }
             }
 
-            solveAxisBounds(xAxis, this.xBounds);
-            solveAxisBounds(yAxis, this.yBounds);
+            xAxis.plot = solveAxisBounds(xAxis, this.xBounds);
+            yAxis.plot = solveAxisBounds(yAxis, this.yBounds);
 
             const xTicks = this.xTickContainer._ticks;
             for(var xData in xTicks) {
-                const xTick = xTicks[xData];
-                const x = xAxis.plot(xData);
-                const y = yAxis.plot(0);
-                xTick.x = x;
-                xTick.y = 0;
+                const tick = xTicks[xData];
+                tick.x = xAxis.plot(xData);
+                tick.y = 0;
+                tick._label.y = 0; yAxis.plot(0);
 
-                xTick._entries.clear();
-                xTick._entries.beginFill(0xff0000);
+                tick._entries.clear();
+                tick._entries.beginFill(0xff0000);
             }
 
             for(var e in this.entries) {
                 var entry = this.entries[e];
 
-                // trace("Entry: ", e, entry);
                 const xData = xAxis.compareFunc(entry);
                 const yData = yAxis.compareFunc(entry);
                 const xTick = xTicks[xData];
 
                 xTick._entries.drawCircle(0, yAxis.plot(yData), 2);
-                
-                // if(this.itemRenderer) {
-                //     this.itemRenderer(entry, {x, y});
-                // }
             }
         },
 
-        adjustEntries() {
+        async adjustEntries() {
             const {xAxis, yAxis, entries, pixi} = this;
             
             const xTicks = this.xTickContainer._ticks;
             for(var xData in xTicks) {
-                const xTick = xTicks[xData];
+                const tick = xTicks[xData];
                 const x = xAxis.plot(xData);
                 const y = yAxis.plot(0);
-                xTick.x = x;
-                xTick.y = y;
+                tick.x = x | 0;
+                tick.y = 0;
+                tick._label.y = y;
+                tick._line.y = y;
 
-                xTick._entries.clear();
-                xTick._entries.beginFill(0xff0000);
+                tick._entries.clear();
+                tick._entries.beginFill(0xff0000);
             }
 
 
             for(var e in this.entries) {
                 var entry = this.entries[e];
-
-                // trace("Entry: ", e, entry);
                 const xData = xAxis.compareFunc(entry);
                 const yData = yAxis.compareFunc(entry);
                 const xTick = xTicks[xData];
 
                 xTick._entries.drawCircle(0, yAxis.plot(yData), 2);
-                
-                // if(this.itemRenderer) {
-                //     this.itemRenderer(entry, {x, y});
-                // }
             }
         },
 
-        updateChart() {
-            trace("Updating the chart!");
+        drawMainGuides() {
+            const { pixi, guideUI } = this;
+            const { g, xLabel, yLabel } = guideUI;
+            const w = this.$el.offsetWidth;
+            const h = this.$el.offsetHeight;
 
-            // const entriesPerDate = {};
-            // for(var entry of this.entries) {
-            //     const date = entry.DateTime;
-            //     const dateArr = entriesPerDate[date] || [];
-            //     const header = `${entry.Device_ID}:${entry.Serial_Number}`.padEnd(20, ' '); 
-            //     dateArr.push(`${header} = ${entry.Wattage}`);
+            g.clear();
+            pixi.drawLine(g, gap.x, 0, gap.x, h-gap.y, 0x000000);
+            pixi.drawLine(g, gap.x, h-gap.y, w, h-gap.y, 0x000000);
+            xLabel.x = w/2;
+            xLabel.y = h-gap.y/2;
 
-            //     if(!entriesPerDate[date]) entriesPerDate[date] = dateArr;
-            // }
+            yLabel.x = 2;
+            yLabel.y = h/2;
+        },
+
+        onMouseMove(mouseXY) {
+            const {yAxis} = this;
+            const xTicks = this.xTickContainer._ticks;
+            const yZero = yAxis.plot(0);
+            const entryAlpha = 0.3;
+            const entryAlphaInv = 1 - entryAlpha;
+            const proximity = 20;
+            const distance = 5;
+
+            if(!mouseXY) {
+                for(var xData in xTicks) {
+                    const tick = xTicks[xData];
+
+                    tick._label.alpha = 0;
+                    tick._line.alpha = 0;
+                    tick._entries.alpha = 0.5;
+                }
+            } else {
+                const {x, y} = mouseXY;
+                
+                for(var xData in xTicks) {
+                    const tick = xTicks[xData];
+
+                    const a = clamp( 1 - Math.abs(x - tick.x)/proximity, 0, 1);
+
+                    tick._label.alpha = a > 0.9 ? 1 : 0;
+                    tick._line.alpha = a;
+                    tick._entries.alpha = entryAlpha + a * entryAlphaInv;
+
+                    const aExpo = (a * 2)**2;
+                    tick._label.y = yZero + aExpo * distance;
+                    tick._line.scale.y = 1 + a;
+                }
+            }
             
-            this.initEntries();
-
-            this.redraw();
         }
     },
 
@@ -237,7 +258,8 @@ export default {
 
         this.updateChart();
 
-        const resizeHandler = () => this.redraw();
+        const resizeHandler = () => this.updateChart(true);
+
         window.addEventListener('resize', resizeHandler);
         this.$once('hook:beforeDestroy', () => {
             window.removeEventListener('resize', resizeHandler);

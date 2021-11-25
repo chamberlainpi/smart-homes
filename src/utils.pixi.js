@@ -6,13 +6,25 @@ export function createPixiApp( pixiOptions ) {
         ... pixiOptions
     });
 
+    app.stage.interactive = true;
+    app.stage.on('pointermove', e => {
+        const {x, y} = e.data.global;
+        context.mouse.x = x;
+        context.mouse.y = y;
+
+        const mouseXY = x<0 || x>app.renderer.width || y<0 || y>app.renderer.height ? null : context.mouse;
+
+        pixiOptions.onMouseMove && pixiOptions.onMouseMove(mouseXY);
+    })
+
     const drawContext = [app.stage];
 
-    return {
+    const context = {
         app,
         ticker: app.ticker,
         renderer: app.renderer,
         stage: app.stage,
+        mouse: {x:0, y:0},
 
         get width() {
             return app.renderer.width;
@@ -91,4 +103,6 @@ export function createPixiApp( pixiOptions ) {
             return text;
         }
     };
+
+    return context;
 }

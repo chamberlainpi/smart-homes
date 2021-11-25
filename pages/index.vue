@@ -28,7 +28,26 @@
         <span>{{offsetDayCurrentFormatted}}</span>
       </div>
 
-      <LineChart class="border border-gray-300"
+      <LineChart class="test-mockup border border-gray-300"
+        width="100%"
+        height="200px"
+        :entries="mockupEntries"
+        :xBounds="mockupBounds"
+        :yBounds="[0, 1000]"
+        :xAxis="{
+          label: 'Time',
+          compareFunc: d => d.DateTime,
+          tick: d => d.split('T').pop().replace(/\.[0-9]*Z/g, ''),
+          size: 9,
+          evaluate: d => d==null ? 0 : new Date(d).getTime()
+          }"
+        :yAxis="{
+          label: 'Wattage',
+          compareFunc: d => d.Wattage
+          }">
+      </LineChart>
+
+      <!-- <LineChart class="border border-gray-300"
         width="100%"
         height="400px"
         :entries="filteredReadings"
@@ -45,7 +64,7 @@
           label: 'Wattage',
           compareFunc: d => d.Wattage
           }">
-      </LineChart>
+      </LineChart> -->
     </div>
 
   </div>
@@ -53,14 +72,14 @@
 
 <script>
 import '@/src/extensions';
-import dayjs from 'dayjs';
+import 'vue-select/dist/vue-select.css';
 import Vue from 'vue';
+import dayjs from 'dayjs';
 import LineChart from '~/components/LineChart.vue';
 import CountedItem from '~/components/CountedItem.vue';
 import FilterDropDown from '~/components/FilterDropDown.vue';
 import { getCountSortFunc, clamp, _ } from '@/src/utils';
-import { organizeReadings, parseSimplifiedWattageData } from '~/src/utils.wattage';
-import 'vue-select/dist/vue-select.css';
+import { organizeReadings, parseSimplifiedWattageData, generateMockupData } from '~/src/utils.wattage';
 
 export default Vue.extend({
   components: {
@@ -70,6 +89,8 @@ export default Vue.extend({
   },
 
   data: () => ({
+    mockupEntries: [],
+    mockupBounds: [],
     wattageReadings: [],
     serialNumbers: [],
     deviceIds: [],
@@ -117,7 +138,7 @@ export default Vue.extend({
 
     offsetDayRange() {
       return dayjs(this.dateLimits.max).diff(this.dateLimits.min, 'day');
-    }
+    },
   },
 
   watch: {
@@ -173,13 +194,14 @@ export default Vue.extend({
       
       this.isBusy = false;
     },
-
-    onLineChartItemRender(item, {x, y}) {
-      trace(item, x, y);
-    }
   },
 
   async mounted() {
+    
+    const { mockupEntries, mockupBounds } = generateMockupData(100);
+    this.mockupEntries = mockupEntries;
+    this.mockupBounds = mockupBounds;
+
     //Store a "debounced" copy of the fetch method to avoid spamming requests:
     this._fetchWattageReadings = _.debounce(() => this.fetchWattageReadings(), 100);
     this._countSortBySerialNumber = getCountSortFunc(() => this.wattageReadings, 'Serial_Number');

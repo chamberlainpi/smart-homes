@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import Chance from 'chance';
 import { _, defer, getTime } from './utils';
 
 export function organizeReadings( readings ) {
@@ -63,4 +64,37 @@ export async function parseSimplifiedWattageData( wattageData ) {
     trace(`*parseSimplifiedWattageData* lasted for ${timeFrames} frames.`);
     
     return readings;
+}
+
+
+export function generateMockupData( total ) {
+  const chance = new Chance('JUST A SEED HERE');
+  const mockupLocations = 'Basement,LivingRoom,Kitchen,Garage'.split(',');
+  const randInt = range => chance.natural({max: range});
+
+  const mockupEntries = _.times(total, () => ({
+    DateTime: dayjs('2019-04-29T03:00:00.000Z').add(randInt(10000), 'minute').toISOString(),
+    Serial_Number: chance.hash({length: 8}),
+    Device_Type: chance.pickone(mockupLocations),
+    Wattage: chance.floating({min:0, max: 1000})
+  }));
+
+  const mockupBounds = getMinMaxDates( mockupEntries );
+
+  return {mockupEntries, mockupBounds};
+}
+
+export function getMinMaxDates( entries ) {
+    var min = new Date().getTime();
+    var max = 0;
+
+    for(var entry of entries) {
+        var millis = new Date(entry.DateTime).getTime();
+        if(millis < min) min = millis;
+        if(millis > max) max = millis;
+    }
+
+    const toISO = d => new Date(d).toISOString();
+
+    return [toISO(min), toISO(max)];
 }

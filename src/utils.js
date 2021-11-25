@@ -3,8 +3,9 @@ import debounce from 'lodash/debounce';
 import sortBy from 'lodash/sortBy';
 import uniq from 'lodash/uniq';
 import uniqBy from 'lodash/uniqBy';
+import times from 'lodash/times';
 
-export const _ = { forOwn, debounce, sortBy, uniq, uniqBy };
+export const _ = { forOwn, debounce, sortBy, uniq, uniqBy, times };
 
 export const clamp = (v, min, max) => v < min ? min : (v > max ? max : v);
 
