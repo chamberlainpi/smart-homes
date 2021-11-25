@@ -35,6 +35,10 @@ i { font-style: normal; }
     .hbox {
         @apply flex gap-2 p-2 items-center;
     }
+
+    .centered {
+        @apply flex items-center justify-center;
+    }
 }
 
 @layer utilities {

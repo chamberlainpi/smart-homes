@@ -1,6 +1,7 @@
 /* global PIXI */
 import { _, clamp } from '@/src/utils';
 import { createPixiApp } from '@/src/utils.pixi';
+import EventEmitter from 'eventemitter3';
 
 const gap:XYType = {x: 50, y: 50};
 const deg2rad:number = Math.PI / 180;
@@ -14,8 +15,11 @@ export function setupLineChart(_this:LineChartType) {
 
     const {xAxis, yAxis, $el} = _this;
     const getSize = () => ({w: $el.offsetWidth, h: $el.offsetHeight});
+    const events = new EventEmitter();
 
     const ctx = {
+        events,
+
         setupPixiCanvas() {
             pixi = createPixiApp({
                 view: _this.canvas,
@@ -30,14 +34,13 @@ export function setupLineChart(_this:LineChartType) {
 
         destroy() {
             pixi.destroy();
+            events.removeAllListeners();
         },
 
         clearCanvas() {
             if(!pixi) return;
             pixi.clear();
         },
-
-        _resizeChart:null,
 
         resizeChart() {
             const {w, h} = getSize();
@@ -46,11 +49,15 @@ export function setupLineChart(_this:LineChartType) {
         },
 
         async updateChart(skipInit=false) {
+            events.emit('busy');
+            
             !skipInit && ctx.initEntries();
     
             await ctx.adjustGuides();
             await ctx.adjustEntries();
             ctx.onMouseMove();
+
+            events.emit('unbusy');
         },
 
         initGuides() {

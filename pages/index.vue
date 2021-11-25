@@ -30,25 +30,6 @@
 
       <LineChart class="test-mockup border border-gray-300"
         width="100%"
-        height="200px"
-        :entries="mockupEntries"
-        :xBounds="mockupBounds"
-        :yBounds="[0, 1000]"
-        :xAxis="{
-          label: 'Time',
-          compareFunc: d => d.DateTime,
-          tick: d => d.split('T').pop().replace(/\.[0-9]*Z/g, ''),
-          size: 9,
-          evaluate: d => d==null ? 0 : new Date(d).getTime()
-          }"
-        :yAxis="{
-          label: 'Wattage',
-          compareFunc: d => d.Wattage
-          }">
-      </LineChart>
-
-      <!-- <LineChart class="border border-gray-300"
-        width="100%"
         height="400px"
         :entries="filteredReadings"
         :xBounds="offsetDayBounds"
@@ -56,15 +37,15 @@
         :xAxis="{
           label: 'Time',
           compareFunc: d => d.DateTime,
-          tick: d => d.replace('T', '\n').replace(/\.[0-9]*Z/g, ''),
+          tick: d => d.split('T').pop().replace(/\.[0-9]*Z/g, ''),
+          tickEveryNth: '--------------------------',
+          evaluate: d => d==null ? 0 : new Date(d).getTime(),
           size: 9,
-          evaluate: d => d==null ? 0 : new Date(d).getTime()
-          }"
+        }"
         :yAxis="{
           label: 'Wattage',
           compareFunc: d => d.Wattage
-          }">
-      </LineChart> -->
+        }" />
     </div>
 
   </div>
@@ -185,7 +166,7 @@ export default Vue.extend({
         PROD: './api/readings/date/' + this.offsetDayCurrentFormatted
       };
 
-      const wattageData = await fetch(ENDPOINTS.TEST).then( res => res.json() );
+      const wattageData = await fetch(ENDPOINTS.PROD).then( res => res.json() );
       this.wattageReadings = await parseSimplifiedWattageData( wattageData );
 
       //Sort the filters for Serial_Number and Device_ID by # of hits [their total numbers in (#) parentheses]

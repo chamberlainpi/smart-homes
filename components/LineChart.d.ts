@@ -1,7 +1,7 @@
 
 interface LineChartType {
-    xAxis:any,
-    yAxis:any,
+    xAxis:AxisType,
+    yAxis:AxisType,
     xBounds:Array<any>,
     yBounds:Array<any>,
     entries:Array<any>,
@@ -11,8 +11,13 @@ interface LineChartType {
 }
 
 interface AxisType {
+    label:string,
     evaluate?:Function,
-    boundsPixels:Array<number>
+    boundsPixels:Array<number>,
+    compareFunc:Function,
+    tick:Function,
+    size:number,
+    plot:Function,
 }
 
 interface XYType {
