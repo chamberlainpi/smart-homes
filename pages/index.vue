@@ -25,16 +25,26 @@
         <input class="slider" type="range" min="0" :max="offsetDayRange" v-model.number="offset" @change="onOffsetChanged">
         <button class="btn btn-sm fa fa-plus" @click="changeOffset(1)"></button>
         <button class="btn btn-sm fa fa-minus" @click="changeOffset(-1)"></button>
-        <span>{{offsetDayCurrent}}</span>
+        <span>{{offsetDayCurrentFormatted}}</span>
       </div>
 
       <LineChart class="border border-gray-300"
         width="100%"
         height="400px"
         :entries="filteredReadings"
-        :itemRenderer="onLineChartItemRender"
-        :xAxis="{label: 'Time', compareFunc: d => new Date(d.DateTime) }"
-        :yAxis="{label: 'Wattage', compareFunc: d => d.Wattage }">
+        :xBounds="offsetDayBounds"
+        :yBounds="[0, 3000]"
+        :xAxis="{
+          label: 'Time',
+          compareFunc: d => d.DateTime,
+          tick: d => d.replace('T', '\n').replace(/\.[0-9]*Z/g, ''),
+          size: 9,
+          evaluate: d => d==null ? 0 : new Date(d).getTime()
+          }"
+        :yAxis="{
+          label: 'Wattage',
+          compareFunc: d => d.Wattage
+          }">
       </LineChart>
     </div>
 
@@ -91,8 +101,18 @@ export default Vue.extend({
       return filtered;
     },
 
+    offsetDayBounds() {
+      const dayNow = this.offsetDayCurrent;
+      if(!dayNow.isValid()) return [null, null];
+      return [dayNow.toISOString(), dayNow.add(1, 'hour').toISOString()];
+    },
+
+    offsetDayCurrentFormatted() {
+      return this.offsetDayCurrent.format('YYYY-MM-DD');
+    },
+
     offsetDayCurrent() {
-      return dayjs(this.dateLimits.min).add(this.offset, 'day').format('YYYY-MM-DD');
+      return dayjs(this.dateLimits.min).add(this.offset, 'day');
     },
 
     offsetDayRange() {
@@ -109,7 +129,6 @@ export default Vue.extend({
   methods: {
     changeOffset(byAmount) {
       this.offset += byAmount;
-
       this.offset = clamp(this.offset, 0, 9999);
 
       this._fetchWattageReadings();
@@ -134,17 +153,17 @@ export default Vue.extend({
     },
 
     async fetchWattageReadings() {
-      if(this.offsetDayCurrent === 'Invalid Date') return;
+      if(this.offsetDayCurrentFormatted === 'Invalid Date') return;
 
       if(this.isBusy) return;
 
       this.isBusy = true;
 
       const ENDPOINTS = {
-        TEST: './api/readings/0',
-        PROD: './api/readings/date/' + this.offsetDayCurrent
+        TEST: './api/readings/' + this.offset,
+        PROD: './api/readings/date/' + this.offsetDayCurrentFormatted
       };
-      
+
       const wattageData = await fetch(ENDPOINTS.TEST).then( res => res.json() );
       this.wattageReadings = await parseSimplifiedWattageData( wattageData );
 

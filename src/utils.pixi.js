@@ -1,7 +1,7 @@
 export function createPixiApp( pixiOptions ) {
     const app = new PIXI.Application({
         resolution: window.devicePixelRatio,
-        autoResize: true,
+        // autoResize: true,
         antialias: true,
         ... pixiOptions
     });
@@ -50,10 +50,11 @@ export function createPixiApp( pixiOptions ) {
         },
 
         createContainer(drawFunc) {
+            const container = drawContext[drawContext.length - 1];
             const c = new PIXI.Container();
-            app.stage.addChild(c);
+            container.addChild(c);
             drawContext.push(c);
-            drawFunc();
+            drawFunc && drawFunc(c);
             drawContext.pop();
             return c;
         },
