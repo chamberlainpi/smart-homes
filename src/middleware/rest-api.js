@@ -3,11 +3,10 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import { db } from './utils/connect-db';
 import CONSTS from '../api.constants';
+import { getTime } from '../utils';
 import dayjs from 'dayjs';
 
 const { ERROR_CODES, WATTAGE_READING } = CONSTS;
-
-const MILLIS = () => new Date().getTime();
 const logNow = msg => trace( `${new Date().toISOString()} - ${msg}`);
 const sendError = (res, err) => {
     logNow(err.error);
@@ -31,7 +30,7 @@ app.get('/', (req, res) => {
 app.all('/*', async (req, res, next) => {
     const __ = req.__ = {}; //Toss any private data here;
 
-    __.timeStart = MILLIS();
+    __.timeStart = getTime();
 
     if(!db.isConnected) {
         await db.connect();
@@ -54,7 +53,7 @@ app.get('/total', async (req, res, next) => {
 
 app.get('/readings/:offset?', async (req, res, next) => {
     const { __ } = req;
-    
+
     const offset = parseInt(req.params.offset ?? 0);
     if(isNaN(offset) || offset < 0) {
         return sendError(res, {
@@ -66,7 +65,7 @@ app.get('/readings/:offset?', async (req, res, next) => {
     logNow("Reading offset: " + offset);
     const { rows } = await db.query(`SELECT * FROM readings ORDER BY "DateTime" LIMIT ${WATTAGE_READING.LIMIT_PER_QUERY} OFFSET ${offset}`);
 
-    __.timeDiff = MILLIS() - __.timeStart;
+    __.timeDiff = getTime() - __.timeStart;
     const simplified = simplifyWattageData(rows);
 
     sendPretty(res, {
@@ -96,7 +95,7 @@ app.get('/readings/date/:dateStart', async (req, res, next) => {
     try {
         const { rows } = await db.query(q);
 
-        __.timeDiff = MILLIS() - __.timeStart;
+        __.timeDiff = getTime() - __.timeStart;
 
         const simplified = simplifyWattageData(rows);
 

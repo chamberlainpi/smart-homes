@@ -78,10 +78,6 @@ export default Vue.extend({
     filteredReadings() {
       const organized = organizeReadings( this.wattageReadings );
 
-      //Sort the filters for Serial_Number and Device_ID by # of hits [their total numbers in (#) parentheses]
-      this.serialNumbers = this.serialNumbers.sort( this._countSortBySerialNumber );
-      this.deviceIds = this.deviceIds.sort( this._countSortByDeviceIDs );
-
       let filtered = this.wattageReadings;
 
       if(this.filterSerialNumber) {
@@ -138,13 +134,18 @@ export default Vue.extend({
     },
 
     async fetchWattageReadings() {
+      if(this.offsetDayCurrent === 'Invalid Date') return;
+
       if(this.isBusy) return;
 
       this.isBusy = true;
-      
-      const wattageData = await fetch('./api/readings/' + this.offset).then( res => res.json() );
-      
-      this.wattageReadings = parseSimplifiedWattageData( wattageData );
+
+      const wattageData = await fetch('./api/readings/date/' + this.offsetDayCurrent).then( res => res.json() );
+      this.wattageReadings = await parseSimplifiedWattageData( wattageData );
+
+      //Sort the filters for Serial_Number and Device_ID by # of hits [their total numbers in (#) parentheses]
+      this.serialNumbers = this.serialNumbers.sort( this._countSortBySerialNumber );
+      this.deviceIds = this.deviceIds.sort( this._countSortByDeviceIDs );
       
       this.isBusy = false;
     },
@@ -154,14 +155,14 @@ export default Vue.extend({
     }
   },
 
-  mounted() {
+  async mounted() {
     //Store a "debounced" copy of the fetch method to avoid spamming requests:
     this._fetchWattageReadings = _.debounce(() => this.fetchWattageReadings(), 100);
     this._countSortBySerialNumber = getCountSortFunc(() => this.wattageReadings, 'Serial_Number');
     this._countSortByDeviceIDs = getCountSortFunc(() => this.wattageReadings, 'Device_ID');
     
-    this.fetchSerialsAndDeviceIDs();
-    this.fetchWattageReadings();
+    await this.fetchSerialsAndDeviceIDs();
+    await this.fetchWattageReadings();
   }
 })
 </script>

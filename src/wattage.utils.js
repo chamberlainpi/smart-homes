@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { _ } from './utils';
+import { _, defer, getTime } from './utils';
 
 export function organizeReadings( readings ) {
     const organized = { Serial_Number: {}, Device_ID: {} };
@@ -21,33 +21,46 @@ export function organizeReadings( readings ) {
 }
 
 
-export function parseSimplifiedWattageData( wattageData ) {
-    console.clear();
-    
+export async function parseSimplifiedWattageData( wattageData ) {
     const { keys: keysPiped, values: valuesPiped } = wattageData;
     
-    const dateRegex = /^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/g;
-    
+    // const dateRegex = /^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/g;
     const castData = d => {
         if(!d || !d.length) return null;
         // if(dateRegex.test(d)) return new Date(d);
         return d;
     }
 
+    //Parse the data based on supplied *keys* and *values* that are pipe-delimited.
     const keys = keysPiped.split('|');
-    const readings = valuesPiped.map( vPiped => {
+    const readings = [];
+
+    var timeLast = getTime();
+    var timeFrames = 0;
+    const oneFrameMS = 1000 / 60;
+
+    for(var vPiped of valuesPiped) {
         const reading = {};
         const vSplit = vPiped.split('|');
         for(var k in keys) {
             const key = keys[k];
             reading[key] = castData(vSplit[k]);
         }
-        return reading;
-    });
 
+        readings.push( reading );
+
+        const timeNow =  getTime();
+        const timeDiff = timeNow - timeLast;
+
+        if(timeDiff > oneFrameMS) {
+            timeLast = timeNow;
+            timeFrames++;
+            trace(' *TICK!* ');
+            await defer();
+        }
+    }
+
+    trace(`*parseSimplifiedWattageData* lasted for ${timeFrames} frames.`);
     
-    //Parse the data based on supplied *keys* and *values* that are pipe-delimited.
-    trace(readings.length, readings[0]);
-
     return readings;
 }

@@ -18,3 +18,9 @@ export const getCountSortFunc = (arrGetter, field) => (a, b) => {
     const countB = countItems(arr, b, field);
     return countB - countA;
 };
+
+export const defer = () => new Promise( _then => {
+    requestAnimationFrame( _then );
+});
+
+export const getTime = () => new Date().getTime();

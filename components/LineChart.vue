@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import { _ } from '@/src/utils';
+import { _, defer } from '@/src/utils';
 
 const d3 = require('d3');
 
@@ -62,7 +62,7 @@ export default {
             this.drawEntries();
         },
 
-        drawGuides() {
+        async drawGuides() {
             const {xAxis, yAxis, entries, svg} = this;
             const w = this.$el.offsetWidth;
             const h = this.$el.offsetHeight;
@@ -94,11 +94,11 @@ export default {
                             .x( d => x( xAxis.compareFunc(d) ) )
                             .y( d => y( yAxis.compareFunc(d) ) );
 
-            chartGroup.append('path').attr('class', 'line-chart').attr('d', line(entries));
+            // chartGroup.append('path').attr('class', 'line-chart').attr('d', line(entries));
+            //defer
             chartGroup.append('g').attr('class', 'x-axis').call(xGuide);
             chartGroup.append('g').attr('class', 'y-axis').call(yGuide);
 
-            trace("Entries: ", entries.length);
             // const gap = 20; //Label gap
             // const hgap = h - gap;
 
@@ -126,17 +126,15 @@ export default {
         },
 
         updateChart() {
-            const entriesPerDate = {};
-            for(var entry of this.entries) {
-                const date = entry.DateTime;
-                const dateArr = entriesPerDate[date] || [];
-                const header = `${entry.Device_ID}:${entry.Serial_Number}`.padEnd(20, ' '); 
-                dateArr.push(`${header} = ${entry.Wattage}`);
+            // const entriesPerDate = {};
+            // for(var entry of this.entries) {
+            //     const date = entry.DateTime;
+            //     const dateArr = entriesPerDate[date] || [];
+            //     const header = `${entry.Device_ID}:${entry.Serial_Number}`.padEnd(20, ' '); 
+            //     dateArr.push(`${header} = ${entry.Wattage}`);
 
-                if(!entriesPerDate[date]) entriesPerDate[date] = dateArr;
-            }
-
-            trace(JSON.stringify(entriesPerDate, null, '  '));
+            //     if(!entriesPerDate[date]) entriesPerDate[date] = dateArr;
+            // }
 
             this.redraw();
         }

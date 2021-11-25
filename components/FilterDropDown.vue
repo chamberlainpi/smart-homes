@@ -1,7 +1,7 @@
 <template>
     <div>
         <span>{{label}}</span>
-        <v-select :options="options" v-model="valueLocal">
+        <v-select :options="optionsOverZero" v-model="valueLocal">
             <template v-slot:option="entry">
                 <CountedItem :count="countItems(countInArray, entry.label, countField)" :label="entry.label" />
             </template>
@@ -30,6 +30,10 @@ export default {
     },
 
     computed: {
+        optionsOverZero() {
+            return this.options.filter( rawEntry => countItems(this.countInArray, rawEntry, this.countField) > 0 );
+        },
+
         valueLocal: {
             get() {
                 return this.value;
