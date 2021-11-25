@@ -30,7 +30,7 @@
 
       <LineChart class="border border-gray-300"
         width="100%"
-        height="400"
+        height="400px"
         :entries="filteredReadings"
         :itemRenderer="onLineChartItemRender"
         :xAxis="{label: 'Time', compareFunc: d => new Date(d.DateTime) }"
@@ -49,7 +49,7 @@ import LineChart from '~/components/LineChart.vue';
 import CountedItem from '~/components/CountedItem.vue';
 import FilterDropDown from '~/components/FilterDropDown.vue';
 import { getCountSortFunc, clamp, _ } from '@/src/utils';
-import { organizeReadings, parseSimplifiedWattageData } from '@/src/wattage.utils';
+import { organizeReadings, parseSimplifiedWattageData } from '~/src/utils.wattage';
 import 'vue-select/dist/vue-select.css';
 
 export default Vue.extend({
