@@ -39,19 +39,17 @@ export default {
         const { setupPixiCanvas, updateChart, resizeChart } = this.lineChartLogic;
 
         window.pixi = setupPixiCanvas();
-        updateChart();
 
-        this.$watch( 'entries', () => {
-            trace('Entries changed! ----------- ');
-            updateChart();
-        } );
+        updateChart();
+        
+        this.$watch( 'entries', () => updateChart() );
         
         window.addEventListener('resize', resizeChart);
         this.$once('hook:beforeDestroy', () => {
             window.removeEventListener('resize', resizeChart);
         });
 
-        
+        resizeChart();
     },
 }
 </script>
@@ -59,5 +57,6 @@ export default {
 <style>
 .line-chart {
     border: solid 1px pink;
+    overflow: hidden;
 }
 </style>

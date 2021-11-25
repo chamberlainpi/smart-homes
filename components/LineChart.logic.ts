@@ -1,8 +1,8 @@
 /* global PIXI */
-import { _, defer, clamp } from '@/src/utils';
+import { _, clamp } from '@/src/utils';
 import { createPixiApp } from '@/src/utils.pixi';
 
-const gap:XYType = {x: 50, y: 80};
+const gap:XYType = {x: 50, y: 50};
 const deg2rad:number = Math.PI / 180;
 const identity = (a:any) => a;
 
@@ -17,7 +17,6 @@ export function setupLineChart(_this:LineChartType) {
 
     const ctx = {
         setupPixiCanvas() {
-            trace("--setupPixiCanvas");
             pixi = createPixiApp({
                 view: _this.canvas,
                 backgroundColor: 0xffffff,
@@ -30,12 +29,10 @@ export function setupLineChart(_this:LineChartType) {
         },
 
         destroy() {
-            trace("--destroy");
             pixi.destroy();
         },
 
         clearCanvas() {
-            trace("--clearCanvas");
             if(!pixi) return;
             pixi.clear();
         },
@@ -49,8 +46,6 @@ export function setupLineChart(_this:LineChartType) {
         },
 
         async updateChart(skipInit=false) {
-            trace("--updateChart");
-
             !skipInit && ctx.initEntries();
     
             await ctx.adjustGuides();
@@ -59,7 +54,6 @@ export function setupLineChart(_this:LineChartType) {
         },
 
         initGuides() {
-            trace("--initGuides");
             guideUI = {};
             guideUI.group = pixi.createContainer(() => {
                 guideUI.g = pixi.drawGraphic();
@@ -95,7 +89,7 @@ export function setupLineChart(_this:LineChartType) {
                     tick._label = pixi.drawLabel(xTickRender(xData), 0, 0, {fontSize: xAxis.size || 12});
                     tick._label.pivot.y = -10;
                     tick._label.pivot.x = (tick._label.width * .5) | 0;
-                    tick._line = pixi.drawGraphic((g:PIXIGraphics) => pixi.drawLine(g, 0, 0, 0, 10, 0x0, 1));
+                    tick._line = pixi.drawGraphic((g:PIXIGraphics) => pixi.drawLine(g, 0, 0, 0, 10, 0x0, 0.3));
                     tick._entries = pixi.drawGraphic();
                 });
     
@@ -103,20 +97,15 @@ export function setupLineChart(_this:LineChartType) {
     
                 xTickContainer!.addChild(tick);
             }
-
-            trace("--initEntries", Object.keys(xTicks));
         },
 
         async adjustGuides() {
-            trace("--adjustGuides");
-            
             ctx.drawMainGuides();
-            
             ctx.createPlotFunctions();
     
             for(var xData in xTicks) {
                 const tick = xTicks[xData];
-                tick.x = xAxis.plot(xData);
+                tick.x = xAxis.plot(xData) | 0;
                 tick.y = 0;
                 tick._label.y = 0; yAxis.plot(0);
     
@@ -159,7 +148,6 @@ export function setupLineChart(_this:LineChartType) {
         },
     
         async adjustEntries() {
-            trace("--adjustEntries");
             for(var xData in xTicks) {
                 const tick = xTicks[xData];
                 const x = xAxis.plot(xData);
@@ -184,7 +172,6 @@ export function setupLineChart(_this:LineChartType) {
         },
     
         drawMainGuides() {
-            trace("--drawMainGuides");
             const { g, xLabel, yLabel } = guideUI;
             const { w, h } = getSize();
     
@@ -199,9 +186,8 @@ export function setupLineChart(_this:LineChartType) {
         },
     
         onMouseMove(mouseXY?:XYType) {
-            // trace("--onMouseMove");
             const yZero = yAxis.plot ? yAxis.plot(0) : 0;
-            const entryAlpha = 0.3;
+            const entryAlpha = 0.2;
             const entryAlphaInv = 1 - entryAlpha;
             const proximity = 20;
             const distance = 5;
@@ -212,7 +198,7 @@ export function setupLineChart(_this:LineChartType) {
     
                     tick._label.alpha = 0;
                     tick._line.alpha = 0;
-                    tick._entries.alpha = 0.5;
+                    tick._entries.alpha = entryAlpha;
                 }
             } else {
                 const {x, y} = mouseXY;
