@@ -98,3 +98,18 @@ export function getMinMaxDates( entries ) {
 
     return [toISO(min), toISO(max)];
 }
+
+export const simplifyWattageData = rows => {
+    if(!rows || !rows.length) return {empty: true};
+
+    const preserveDate = d => d!=null && d.constructor === Date ? d.toISOString() : d;
+    const keepDateFirst = (a, b) => b.indexOf('Date') - a.indexOf('Date');
+    const keys = Object.keys(rows[0]).sort( keepDateFirst );
+    const values = rows.map( r => keys.map( k => preserveDate(r[k]) ).join('|') );
+    
+    return {
+        count: values.length,
+        keys:  keys.join('|'),
+        values
+    };
+}

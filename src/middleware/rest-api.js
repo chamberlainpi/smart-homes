@@ -4,6 +4,7 @@ import bodyParser from 'body-parser';
 import { db } from './utils/connect-db';
 import CONSTS from '../api.constants';
 import { getTime } from '../utils';
+import { simplifyWattageData } from '../utils.wattage.js';
 import dayjs from 'dayjs';
 
 const { ERROR_CODES, WATTAGE_READING } = CONSTS;
@@ -138,15 +139,5 @@ app.get('/filters', async (req, res, next) => {
 
     sendPretty(res, data);
 });
-
-const simplifyWattageData = rows => {
-    if(!rows || !rows.length) return {empty: true};
-
-    const preserveDate = d => d!=null && d.constructor === Date ? d.toISOString() : d;
-    const keepDateFirst = (a, b) => b.indexOf('Date') - a.indexOf('Date');
-    const keys = Object.keys(rows[0]).sort( keepDateFirst );
-    const values = rows.map( r => keys.map( k => preserveDate(r[k]) ).join('|') );
-    return {count: values.length, keys:  keys.join('|'), values};
-}
 
 export default { path: '/api', handler: app };
