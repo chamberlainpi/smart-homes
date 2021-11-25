@@ -20,12 +20,21 @@
           :countInArray="wattageReadings" :options="deviceIds" v-model="filterDeviceID" />
       </div> 
 
-      <div id="offset-controls" class="mb-3 hbox">
-        <span class="inline-block">Offset:</span>
-        <input class="slider" type="range" min="0" :max="offsetDayRange" v-model.number="offset" @change="onOffsetChanged">
-        <button class="btn btn-sm fa fa-plus" @click="changeOffset(1)"></button>
-        <button class="btn btn-sm fa fa-minus" @click="changeOffset(-1)"></button>
-        <span>{{offsetDayCurrentFormatted}}</span>
+      <div id="offset-controls" class="mb-3 flex flex-col gap-2 desk:items-center desk:flex-row">
+        <h3 class="inline-block">Offset:</h3>
+        
+        <div class="offset-buttons flex items-center justify-center gap-2">
+          <span class="text-blue-400 whitespace-nowrap w-44">{{offsetDayCurrentFormatted}}</span>
+          <button class="btn btn-sm fa fa-plus" @click="changeOffset(1)"></button>
+          <button class="btn btn-sm fa fa-minus" @click="changeOffset(-1)"></button>
+        </div>
+
+        <input class="slider flex-grow"
+            type="range"
+            min="0"
+            :max="offsetDayRange"
+            v-model.number="offset"
+            @change="onOffsetChanged">
       </div>
 
       <LineChart class="test-mockup border border-gray-300"
@@ -33,12 +42,12 @@
         height="400px"
         :entries="filteredReadings"
         :xBounds="offsetDayBounds"
-        :yBounds="[0, 3000]"
+        :yBounds="wattageLimits"
         :xAxis="{
           label: 'Time',
           compareFunc: d => d.DateTime,
           tick: d => d.split('T').pop().replace(/\.[0-9]*Z/g, ''),
-          tickEveryNth: '--------------------------',
+          tickEveryNth: '--------------------------', //TODO how to assign these Nth tick-markers.
           evaluate: d => d==null ? 0 : new Date(d).getTime(),
           size: 9,
         }"
@@ -76,6 +85,7 @@ export default Vue.extend({
     serialNumbers: [],
     deviceIds: [],
     dateLimits: {min: null, max: null},
+    wattageLimits: [0, 5000],
     offset: 0,
     filterSerialNumber: null,
     filterDeviceID: null,
@@ -110,7 +120,7 @@ export default Vue.extend({
     },
 
     offsetDayCurrentFormatted() {
-      return this.offsetDayCurrent.format('YYYY-MM-DD');
+      return this.offsetDayCurrent.format('YYYY-MM-DD HH:mm:ss');
     },
 
     offsetDayCurrent() {
@@ -146,12 +156,14 @@ export default Vue.extend({
     },
 
     async fetchSerialsAndDeviceIDs() {
-      const filters = await fetch('./api/filters').then( res => res.json() );
-      const { dateLimits, serialNumbers, deviceIds } = filters;
+      const filters = await fetch('./api/init-data').then( res => res.json() );
+      const { dateLimits, wattageLimits, serialNumbers, deviceIds } = filters;
 
       this.serialNumbers = serialNumbers;
       this.deviceIds = deviceIds;
       this.dateLimits = dateLimits;
+      this.wattageLimits = [0, parseFloat(wattageLimits.max)];
+      trace("..........", this.wattageLimits);
     },
 
     async fetchWattageReadings() {
@@ -166,7 +178,7 @@ export default Vue.extend({
         PROD: './api/readings/date/' + this.offsetDayCurrentFormatted
       };
 
-      const wattageData = await fetch(ENDPOINTS.PROD).then( res => res.json() );
+      const wattageData = await fetch(ENDPOINTS.TEST).then( res => res.json() );
       this.wattageReadings = await parseSimplifiedWattageData( wattageData );
 
       //Sort the filters for Serial_Number and Device_ID by # of hits [their total numbers in (#) parentheses]

@@ -87,8 +87,8 @@ app.get('/readings/date/:dateStart', async (req, res, next) => {
     }
 
     const dateEnd = dateStart.add(WATTAGE_READING.LIMIT_DAYS_RANGE, 'day');
-    const dateStartStr = dateStart.format('YYYY-MM-DD');
-    const dateEndStr = dateEnd.format('YYYY-MM-DD');    
+    const dateStartStr = dateStart.toISOString();
+    const dateEndStr = dateEnd.toISOString();    
 
     const q = `SELECT * FROM readings WHERE "DateTime" BETWEEN '${dateStartStr}' AND '${dateEndStr}' ORDER BY "DateTime"`;
     logNow("Reading query: ", q);
@@ -116,7 +116,7 @@ app.get('/readings/date/:dateStart', async (req, res, next) => {
     }
 });
 
-app.get('/filters', async (req, res, next) => {
+app.get('/init-data', async (req, res, next) => {
     const getDistinct = async distinctField => {
         logNow(`>>> ${distinctField}`);
         const { rows } = await db.query(`SELECT DISTINCT "${distinctField}" FROM readings LIMIT ${WATTAGE_READING.LIMIT_SERIAL_NUMBERS}`);
@@ -127,12 +127,16 @@ app.get('/filters', async (req, res, next) => {
     
     const serialNumbers = await getDistinct('Serial_Number');
     const deviceIds = await getDistinct('Device_ID');
-    const { rows } = await db.query(`SELECT min("DateTime") as min_date, max("DateTime") as max_date FROM readings`);
-    const { min_date, max_date } = rows[0];
+    const { rows: rowsDate } = await db.query(`SELECT min("DateTime") as min_date, max("DateTime") as max_date FROM readings`);
+    const { min_date, max_date } = rowsDate[0];
+
+    const { rows: rowsWatts } = await db.query(`SELECT min("Wattage") as min_watts, max("Wattage") as max_watts FROM readings`);
+    const { min_watts, max_watts } = rowsWatts[0];
 
     const data = {
         dateRequested: new Date(),
         dateLimits: {min: min_date, max: max_date},
+        wattageLimits: {min: min_watts, max: max_watts},
         serialNumbers,
         deviceIds
     };
