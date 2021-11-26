@@ -2,6 +2,8 @@
 
 This is a Nuxt-based Coding Challenge project.
 
+![Smart Homes Preview GIF](https://raw.githubusercontent.com/chamberlainpi/smart-homes/master/docs/smart-homes-preview.gif)
+
 ## Installation
 
 Open up a Terminal / CLI in this project directory and run:
