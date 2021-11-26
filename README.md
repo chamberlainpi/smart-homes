@@ -1,69 +1,49 @@
 # smart-homes
 
-## Build Setup
+This is a Nuxt-based Coding Challenge project.
 
-```bash
-# install dependencies
-$ yarn install
+## Installation
 
-# serve with hot reload at localhost:3000
-$ yarn dev
+Open up a Terminal / CLI in this project directory and run:
+ -  `npm install` or...
+ -   `yarn`
 
-# build for production and launch server
-$ yarn build
-$ yarn start
+## Running 
 
-# generate static project
-$ yarn generate
-```
+To run the development build, you can run:
 
-For detailed explanation on how things work, check out the [documentation](https://nuxtjs.org).
+ - `npm run dev`
+ - Browse to `localhost:3000`
+ - **Optional:** You can enable caching by going to `localhost:3000/usecache` instead. (*More details below*)
 
-## Special Directories
+> **NOTE:** At this time, this is the only mode available given time constraints.
+> 
+> *No PROD build unfortunately! :(*
 
-You can create the following extra directories, some of which have special behaviors. Only `pages` is required; you can delete them if you don't want to use their functionality.
+## A few notes about the project
 
-### `assets`
+### What it uses under the hood:
+ - `TailwindCSS`: for styling the Vue app.
+ - `express`: to *shoehorn* the REST API on top of Nuxt as it runs the live dev-server. <br/> A better approach might be to run this as a dedicated process, but for the sake of simplicity, I chose this route so both the Web App + REST API ran on the same `:port` number (3000).
+ - `pixi.js`: This wasn't the first choice when I started. I actually started off with `d3`, but once I realized the large amount of data to be displayed, I wasn't confident that SVG drawing was going to be performant enough. Once I made the switch to `PIXI`, I also experimented to see if `d3` could at least supply the measurements to plot the points / lines / etc, but given it was also my first time with `d3`, I stuck to what I knew and went for a more manual approach you could say!
+ - `vue-select`: Simply a great combo-box plugin! This one exposes a nice `<slot>` to customize the populating items, which I used to print out the `... (123)` hits of each items in the fetched data.
 
-The assets directory contains your uncompiled assets such as Stylus or Sass files, images, or fonts.
+### Challenges along the way:
 
-More information about the usage of this directory in [the documentation](https://nuxtjs.org/docs/2.x/directory-structure/assets).
+-  **Realizing the project requirements indicated to use TypeScript**! I did my best to convert some of the files quickly to `*.ts` and provide as much *typing* as possible (I definitely overused `:any` in multiple places)
+  
+-  **Giving Nuxt a test drive.** I've never used this framework before, but since it's widely popular in the Vue community & was recommended for this challenge, I ran with it anyways! Definitely some complications along the way, as far as where to place the Tailwind config, where to inject custom middleware to run on the existing Nuxt `express` app.
 
-### `components`
+-  **Deciding where the REST API was going to live.** I wasn't actually sure on the correct approach for this, but one goal I set for myself was to run the REST API on the same `:port` as the Nuxt app served the development site on. After the fact, maybe not so much a great idea if this was to run completely separately with no knowledge of Nuxt.
 
-The components directory contains your Vue.js components. Components make up the different parts of your page and can be reused and imported into your pages, layouts and even other components.
+ - **`DateTime` Timezone conversion hell...**<br/> So, I don't deal with client VS. server timezones a whole lot, at least not on a regular basis enough to catch these oddities. What kept happening was each time I queried *"Give me data between X and Y date..."*, it would tack on +3 hours (given my timezone, AST), so each time I got back the data samples, when came time to render it... because my graph displays only a window of time BUT all the samples are X+3 hours ahead... they never showed up!
+> **Sidenote:** I'm not even sure if the "fix" that I came up for the Timezone bugs will work from anywhere this is installed & run from to be quite honest!.
 
-More information about the usage of this directory in [the documentation](https://nuxtjs.org/docs/2.x/directory-structure/components).
+ - **Caching, as always!** I realize this wasn't part of the requirements, but something felt wrong about hitting that Postgres DB so frequently with so much data being returned.
+ <br/> The approach I took was essentially to turn the SQL statement into an MD5 hash, just something to uniquely identify it among other local filenames. So each time the same SQL statement comes along, first it looks if that file exists, and if loading from cache is desired, loads that JSON. If it doesn't find it, it loads it from the Postgres DB first, *massages* the data a bit (applies Timezone fix) before saving it to a `*.json` file in an auto-generated `./.private/db-data/` folder.
 
-### `layouts`
+ - **Squeezing all that data down a bit.** As much as I love dealing with JSON in JS / Node projects, there's an overwhelming amount of unnecessary repetition when it comes to the output of DB table rows. So I wrote up some parser / generator methods to break the rows up into single-lines of `PIPE (|)` delimited strings, joined with a `"keys": "...|...|..."` header that indicates what each corresponding entries represent in that compact row-data.<br/>It makes are far more readable format at a glance, and easier to track / compare where things go wrong. This reduces the data by almost a quarter (25%) compared to the raw verbose JSON equivalent.
+ 
+ - **Other small challenges...** overall I'd say just creating a lot of things from scratch that I could of probably researched more to avoid reinventing the wheel. Drawing that graph from the ground up in particular was not a fun experience lol, but a good learning one.
 
-Layouts are a great help when you want to change the look and feel of your Nuxt app, whether you want to include a sidebar or have distinct layouts for mobile and desktop.
-
-More information about the usage of this directory in [the documentation](https://nuxtjs.org/docs/2.x/directory-structure/layouts).
-
-
-### `pages`
-
-This directory contains your application views and routes. Nuxt will read all the `*.vue` files inside this directory and setup Vue Router automatically.
-
-More information about the usage of this directory in [the documentation](https://nuxtjs.org/docs/2.x/get-started/routing).
-
-### `plugins`
-
-The plugins directory contains JavaScript plugins that you want to run before instantiating the root Vue.js Application. This is the place to add Vue plugins and to inject functions or constants. Every time you need to use `Vue.use()`, you should create a file in `plugins/` and add its path to plugins in `nuxt.config.js`.
-
-More information about the usage of this directory in [the documentation](https://nuxtjs.org/docs/2.x/directory-structure/plugins).
-
-### `static`
-
-This directory contains your static files. Each file inside this directory is mapped to `/`.
-
-Example: `/static/robots.txt` is mapped as `/robots.txt`.
-
-More information about the usage of this directory in [the documentation](https://nuxtjs.org/docs/2.x/directory-structure/static).
-
-### `store`
-
-This directory contains your Vuex store files. Creating a file in this directory automatically activates Vuex.
-
-More information about the usage of this directory in [the documentation](https://nuxtjs.org/docs/2.x/directory-structure/store).
+ 
