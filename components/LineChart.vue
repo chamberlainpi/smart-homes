@@ -19,6 +19,7 @@ export default {
         yAxis: Object,
         xBounds: Array,
         yBounds: Array,
+        tickEveryNth: Function,
     },
 
     data: () => ({
@@ -47,8 +48,7 @@ export default {
         this.lineChartLogic = setupLineChart(this);
         const { setupPixiCanvas, updateChart, resizeChart, events } = this.lineChartLogic;
 
-        window.pixi = setupPixiCanvas();
-
+        setupPixiCanvas();
         updateChart();
 
         this._tweenSpinner = null;
@@ -60,9 +60,7 @@ export default {
         });
 
         events.on('unbusy', () => {
-            setTimeout(() => {
-                if(this._tweenSpinner) this._tweenSpinner.kill();
-            }, 500);
+            setTimeout(() => this._tweenSpinner && this._tweenSpinner.kill(), 500);
             TweenMax.to(this.spinnerWrapper, 1.0, {alpha: 0});
         });
         

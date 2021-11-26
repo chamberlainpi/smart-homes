@@ -38,3 +38,24 @@ export const queryParams = q => {
 
     return results;
 }
+
+export function pushByColumns(cols) {
+    const results = [];
+    var current = [];
+    return {
+        $push(item) {
+            current.push(item);
+            if(current.length===cols) {
+                results.push(current);
+                current = [];
+            }
+
+            return 
+        },
+        $toString(sepOuter, sepInner) {
+            return results
+                .map( arr => arr.join(sepInner) )
+                .join( sepOuter );
+        },
+    }
+}

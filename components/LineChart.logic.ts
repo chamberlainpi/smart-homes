@@ -1,5 +1,5 @@
 /* global PIXI */
-import { _, clamp } from '@/src/utils';
+import { _, clamp, pushByColumns } from '@/src/utils';
 import { createPixiApp } from '@/src/utils.pixi';
 import EventEmitter from 'eventemitter3';
 
@@ -12,7 +12,7 @@ export default null;
 export function setupLineChart(_this:LineChartType) {
     let pixi:any;
     let guideUI:any;
-    let xTickContainer:PIXIContainer | null;
+    let xTickContainer:PIXIContainer;
     let xTicks:any;
 
     const {xAxis, yAxis, $el} = _this;
@@ -52,8 +52,6 @@ export function setupLineChart(_this:LineChartType) {
 
         async updateChart(skipInit=false) {
             !skipInit && ctx.initEntries();
-            
-            trace("----updateChart", _this.entries);
 
             await ctx.adjustGuides();
             await ctx.adjustEntries();
@@ -83,7 +81,7 @@ export function setupLineChart(_this:LineChartType) {
              */
             if(xTickContainer) {
                 xTickContainer.destroy({children: true});
-                xTickContainer = null;
+                xTickContainer = null as any;
             }
     
             xTickContainer = pixi.createContainer();
@@ -159,6 +157,8 @@ export function setupLineChart(_this:LineChartType) {
         },
     
         async adjustEntries() {
+            trace('xTicks: ' + Object.keys(xTicks).length);
+            
             for(var xData in xTicks) {
                 const tick = xTicks[xData];
                 const x = xAxis.plot(xData);
@@ -172,15 +172,21 @@ export function setupLineChart(_this:LineChartType) {
                 tick._entries.beginFill(0xff0000);
             }
 
+            const { $push, $toString } = pushByColumns(6);
+
             for(var e in _this.entries) {
                 var entry = _this.entries[e];
                 const xData = xAxis.compareFunc(entry);
                 const yData = yAxis.compareFunc(entry);
                 const xTick = xTicks[xData];
                 
+                $push( xData.replace(':00.000Z', '').replace('T','_') );
                 xTick._entries.beginFill(0xff0000, 1);
                 xTick._entries.drawCircle(0, yAxis.plot(yData), 2);
             }
+
+            const output = $toString('\n', ' ');
+            trace(output);
         },
     
         drawMainGuides() {

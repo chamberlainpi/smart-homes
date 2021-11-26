@@ -47,14 +47,14 @@
           label: 'Time',
           compareFunc: d => d.DateTime,
           tick: d => d.split('T').pop().replace(/\.[0-9]*Z/g, ''),
-          tickEveryNth: '--------------------------', //TODO how to assign these Nth tick-markers.
           evaluate: d => d==null ? 0 : new Date(d).getTime(),
           size: 9,
         }"
         :yAxis="{
           label: 'Wattage',
           compareFunc: d => d.Wattage
-        }" />
+        }"></LineChart>
+        <!-- tickEveryNth: () => '--------------------------', -->
     </div>
 
   </div>
@@ -73,6 +73,8 @@ import { getCountSortFunc, clamp, _, queryParams } from '@/src/utils';
 import { organizeReadings, parseSimplifiedWattageData, generateMockupData } from '~/src/utils.wattage';
 
 const { WATTAGE_READING } = CONSTS;
+const nocache = process.browser && 'nocache' in queryParams() ? '?nocache=1' : '';
+const fetchCacheAware = url => fetch(url + nocache);
 
 export default Vue.extend({
   components: {
@@ -159,14 +161,16 @@ export default Vue.extend({
       this.filterDeviceID = null;
     },
 
-    async fetchSerialsAndDeviceIDs() {
-      const filters = await fetch('./api/init-data').then( res => res.json() );
-      const { dateLimits, wattageLimits, serialNumbers, deviceIds } = filters;
+    async fetchInitialData() {
+      const initData = await fetchCacheAware('./api/init-data').then( res => res.json() );
+      const { dateLimits, wattageLimits, serialNumbers, deviceIds } = initData;
 
       this.serialNumbers = serialNumbers;
       this.deviceIds = deviceIds;
       this.dateLimits = dateLimits;
       this.wattageLimits = [0, parseFloat(wattageLimits.max)];
+
+      trace(' -- initData', prettyJSON(dateLimits));
     },
 
     async fetchWattageReadings() {
@@ -181,8 +185,7 @@ export default Vue.extend({
         PROD: './api/readings/date/' + this.offsetTimeCurrentFormatted
       };
 
-      const nocache = 'nocache' in queryParams() ? '?nocache=1' : '';
-      const wattageData = await fetch(ENDPOINTS.PROD + nocache).then( res => res.json() );
+      const wattageData = await fetchCacheAware(ENDPOINTS.PROD).then( res => res.json() );
       this.wattageReadings = await parseSimplifiedWattageData( wattageData );
 
       //Sort the filters for Serial_Number and Device_ID by # of hits [their total numbers in (#) parentheses]
@@ -203,7 +206,7 @@ export default Vue.extend({
     this._countSortBySerialNumber = getCountSortFunc(() => this.wattageReadings, 'Serial_Number');
     this._countSortByDeviceIDs = getCountSortFunc(() => this.wattageReadings, 'Device_ID');
     
-    await this.fetchSerialsAndDeviceIDs();
+    await this.fetchInitialData();
     await this.fetchWattageReadings();
   }
 })

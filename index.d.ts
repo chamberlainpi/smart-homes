@@ -49,4 +49,5 @@ interface PIXIGraphics extends PIXIDisplay {
 interface PIXIContainer extends PIXIDisplay {
     addChild(child:PIXIDisplay):void
     removeChild(child:PIXIDisplay):void
+    [key:string]:any
 }
