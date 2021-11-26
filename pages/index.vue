@@ -35,7 +35,6 @@
             :max="offsetMax"
             v-model.number="offset"
             @change="onOffsetChanged">
-        <i>{{offsetMax}}</i>
       </div>
 
       <LineChart class="test-mockup border border-gray-300"
@@ -44,18 +43,20 @@
         :entries="filteredReadings"
         :xBounds="sampleTimeBounds"
         :yBounds="wattageLimits"
+        :tooltipStyle="{fontSize: 10, align: 'left'}"
         :xAxis="{
           label: 'Time',
           compareFunc: d => d.DateTime,
-          tick: d => d.split('T').pop().replace(/\.[0-9]*Z/g, ''),
+          tick: d => cleanDate(d).split('\n').pop(),
           evaluate: d => d==null ? 0 : new Date(d).getTime(),
-          size: 9,
+          evaluateInverse: d => d==null ? null : cleanDate(new Date(d).toISOString()),
+          fontSize: 9,
         }"
         :yAxis="{
           label: 'Wattage',
-          compareFunc: d => d.Wattage
-        }"></LineChart>
-        <!-- tickEveryNth: () => '--------------------------', -->
+          compareFunc: d => d.Wattage,
+          evaluateInverse: d => d.toFixed(2) + 'W',
+        }" /> <!-- tickEveryNth: () => '--------------------------', -->
     </div>
 
   </div>
@@ -67,15 +68,15 @@ import 'vue-select/dist/vue-select.css';
 import Vue from 'vue';
 import dayjs from 'dayjs';
 import CONSTS from '@/src/api.constants';
-import LineChart from '~/components/LineChart.vue';
-import CountedItem from '~/components/CountedItem.vue';
-import FilterDropDown from '~/components/FilterDropDown.vue';
+import LineChart from '@/components/LineChart.vue';
+import CountedItem from '@/components/CountedItem.vue';
+import FilterDropDown from '@/components/FilterDropDown.vue';
 import { getCountSortFunc, clamp, _, queryParams } from '@/src/utils';
-import { organizeReadings, parseSimplifiedWattageData, generateMockupData } from '~/src/utils.wattage';
+import { organizeReadings, parseSimplifiedWattageData, generateMockupData } from '@/src/utils.wattage';
 
 const { OFFSET_TIME_RANGE, OFFSET_TIME_UNIT, SAMPLE_TIME_UNIT, SAMPLE_TIME_RANGE } = CONSTS.WATTAGE_READING;
-const nocache = process.browser && 'nocache' in queryParams() ? '?nocache=1' : '';
-const fetchCacheAware = url => fetch(url + nocache);
+const usecache = process.browser && 'usecache' in queryParams() ? '' : '?nocache=1';
+const fetchCacheAware = url => fetch(url + usecache);
 
 export default Vue.extend({
   components: {
@@ -142,15 +143,7 @@ export default Vue.extend({
       const maxDate = dayjs(this.dateLimits.max)
         .subtract(SAMPLE_TIME_RANGE*2, SAMPLE_TIME_UNIT);
       
-      const max = maxDate.diff(this.dateLimits.min, OFFSET_TIME_UNIT) / OFFSET_TIME_RANGE;
-      trace("?????",
-        this.dateLimits.min,
-        this.dateLimits.max,
-        maxDate.toISOString(),
-        max,
-        dayjs(this.dateLimits.max).diff(this.dateLimits.min, OFFSET_TIME_UNIT)
-      );
-      return max;
+      return maxDate.diff(this.dateLimits.min, OFFSET_TIME_UNIT) / OFFSET_TIME_RANGE;
     },
   },
 
@@ -212,6 +205,10 @@ export default Vue.extend({
       
       this.isBusy = false;
     },
+
+    cleanDate(d) {
+      return d.replace('T', '\n').replace(/\.[0-9]*Z/g, '');
+    }
   },
 
   async mounted() {

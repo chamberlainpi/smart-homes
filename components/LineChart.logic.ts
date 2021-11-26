@@ -3,7 +3,7 @@ import { _, clamp, pushByColumns } from '@/src/utils';
 import { createPixiApp } from '@/src/utils.pixi';
 import EventEmitter from 'eventemitter3';
 
-const gap:XYType = {x: 50, y: 50};
+const gap:XYType = {x: 80, y: 50};
 const deg2rad:number = Math.PI / 180;
 const identity = (a:any) => a;
 
@@ -14,6 +14,7 @@ export function setupLineChart(_this:LineChartType) {
     let guideUI:any;
     let xTickContainer:PIXIContainer;
     let xTicks:any;
+    let mouseTooltip:PIXIContainer;
 
     const {xAxis, yAxis, $el} = _this;
     const getSize = () => ({w: $el.offsetWidth, h: $el.offsetHeight});
@@ -28,8 +29,15 @@ export function setupLineChart(_this:LineChartType) {
                 backgroundColor: 0xffffff,
                 onMouseMove: (mouseXY:XYType) => ctx.onMouseMove(mouseXY)
             });
-    
+
             ctx.initGuides();
+
+            xTickContainer = pixi.createContainer();
+            mouseTooltip = pixi.createContainer((c:PIXIContainer) => {
+                c._text = pixi.drawLabel(null, 0, 0, _this.tooltipStyle);
+
+                c._graphics = pixi.drawGraphic();
+            });
 
             return pixi;
         },
@@ -67,6 +75,12 @@ export function setupLineChart(_this:LineChartType) {
                 guideUI.xLabel = pixi.drawLabel(xAxis.label);
                 guideUI.yLabel = pixi.drawLabel(yAxis.label);
                 guideUI.yLabel.rotation = -90 * deg2rad;
+
+                const fontSize = 10;
+                guideUI.xLabelMin = pixi.drawLabel('', 0, 0, {fontSize, align: 'left'});
+                guideUI.xLabelMax = pixi.drawLabel('', 0, 0, {fontSize, align: 'right'});
+                guideUI.yLabelMin = pixi.drawLabel('', 0, 0, {fontSize, align: 'right'});
+                guideUI.yLabelMax = pixi.drawLabel('', 0, 0, {fontSize, align: 'right'});
             });
         },
 
@@ -75,19 +89,12 @@ export function setupLineChart(_this:LineChartType) {
             
             /**
              * Reason that we "init" the entries and not simply "draw" them right away
-             * is to prepare each one belonging to a given timestamp to render on a PIXI.Container.
+             * is to prepare each one belonging to a given timestamp to render on its own PIXI.Container.
              * Then, when scaling the graph horizontally, it's just a matter of adjusting those
              * containers' X positions.
              */
-            if(xTickContainer) {
-                xTickContainer.destroy({children: true});
-                xTickContainer = null as any;
-            }
-    
-            xTickContainer = pixi.createContainer();
+            xTickContainer.removeChildren();
             xTicks = {};
-
-            const xTickRender = xAxis.tick || identity;
     
             for(var entry of _this.entries) {
                 const xData = xAxis.compareFunc(entry);
@@ -95,28 +102,24 @@ export function setupLineChart(_this:LineChartType) {
                 if(xTicks[xData]) continue;
     
                 const tick = xTicks[xData] = pixi.createContainer((tick:PIXIContainer | any) => {
-                    tick._label = pixi.drawLabel(xTickRender(xData), 0, 0, {fontSize: xAxis.size || 12});
-                    tick._label.pivot.y = -10;
-                    tick._label.pivot.x = (tick._label.width * .5) | 0;
                     tick._line = pixi.drawGraphic((g:PIXIGraphics) => pixi.drawLine(g, 0, 0, 0, 10, 0x0, 0.3));
                     tick._entries = pixi.drawGraphic();
                 });
     
                 tick.name = xData;
     
-                xTickContainer!.addChild(tick);
+                xTickContainer.addChild(tick);
             }
         },
 
         async adjustGuides() {
-            ctx.drawMainGuides();
             ctx.createPlotFunctions();
+            ctx.drawMainGuides();
     
             for(var xData in xTicks) {
                 const tick = xTicks[xData];
                 tick.x = xAxis.plot(xData) | 0;
                 tick.y = 0;
-                tick._label.y = 0; yAxis.plot(0);
     
                 tick._entries.clear();
                 tick._entries.beginFill(0xff0000, 1);
@@ -139,40 +142,43 @@ export function setupLineChart(_this:LineChartType) {
             xAxis.boundsPixels = [gap.x, w];
             yAxis.boundsPixels = [h-gap.y, 0];
             
-            const createPlotFunction = (axis:AxisType, bounds:Array<any>, evaluate:any) => {
+            const createPlotFunction = (axis:AxisType, bounds:Array<any>) => {
+                const evaluate:any = axis.evaluate || identity;
+                const evaluateInv:any = axis.evaluateInverse || identity;
                 const [min, max] = bounds.map(evaluate);
                 const [minPX, maxPX] = axis.boundsPixels;
                 const diff = max - min;
                 const diffPixels = maxPX - minPX;
                 
-                return (input:any) => {
+                axis.plot = (input:any) => {
                     const value = evaluate(input);
                     const ratio = (value - min) / diff;
                     return minPX + ratio * diffPixels;
+                };
+
+                axis.plotInverse = (pixel:number) => {
+                    const ratio = (pixel - minPX) / diffPixels;
+                    const value = ratio * diff + min;
+                    return evaluateInv(value);
                 }
             }
     
-            xAxis.plot = createPlotFunction(xAxis, _this.xBounds, xAxis.evaluate || identity);
-            yAxis.plot = createPlotFunction(yAxis, _this.yBounds, yAxis.evaluate || identity);
+            createPlotFunction(xAxis, _this.xBounds);
+            createPlotFunction(yAxis, _this.yBounds);
         },
     
         async adjustEntries() {
-            trace('xTicks: ' + Object.keys(xTicks).length);
-            
             for(var xData in xTicks) {
                 const tick = xTicks[xData];
                 const x = xAxis.plot(xData);
                 const y = yAxis.plot(0);
                 tick.x = x | 0;
                 tick.y = 0;
-                tick._label.y = y;
                 tick._line.y = y;
     
                 tick._entries.clear();
                 tick._entries.beginFill(0xff0000);
             }
-
-            const { $push, $toString } = pushByColumns(6);
 
             for(var e in _this.entries) {
                 var entry = _this.entries[e];
@@ -180,13 +186,9 @@ export function setupLineChart(_this:LineChartType) {
                 const yData = yAxis.compareFunc(entry);
                 const xTick = xTicks[xData];
                 
-                $push( xData.replace(':00.000Z', '').replace('T','_') );
                 xTick._entries.beginFill(0xff0000, 1);
                 xTick._entries.drawCircle(0, yAxis.plot(yData), 2);
             }
-
-            const output = $toString('\n', ' ');
-            //trace(output);
         },
     
         drawMainGuides() {
@@ -201,41 +203,88 @@ export function setupLineChart(_this:LineChartType) {
     
             yLabel.x = 2;
             yLabel.y = h/2;
+
+            const { xLabelMin, xLabelMax, yLabelMin, yLabelMax } = guideUI;
+            const xEval = xAxis.plotInverse || identity;
+            const yEval = yAxis.plotInverse || identity;
+            const setPivot = (label:any, ratioX:number, ratioY:number) => {
+                label.pivot.x = (ratioX * label.width) | 1;
+                label.pivot.y = (ratioY * label.height) | 0;
+            }
+
+            xLabelMin.x = gap.x;
+            xLabelMin.y = h - gap.y;
+            xLabelMin.text = xEval(xLabelMin.x);
+            setPivot(xLabelMin, -0.08, 0);
+            
+            xLabelMax.x = w;
+            xLabelMax.y = h - gap.y;
+            xLabelMax.text = xEval(xLabelMax.x);
+            setPivot(xLabelMax, 1.08, 0);
+            
+            yLabelMin.x = gap.x;
+            yLabelMin.y = h - gap.y;
+            yLabelMin.text = yEval(yLabelMin.y);
+            setPivot(yLabelMin, 1.08, 1.08);
+
+            yLabelMax.x = gap.x;
+            yLabelMax.y = 0;
+            yLabelMax.text = yEval(yLabelMax.y);
+            setPivot(yLabelMax, 1.08, 0.08);
         },
     
         onMouseMove(mouseXY?:XYType) {
-            const yZero = yAxis.plot ? yAxis.plot(0) : 0;
+            const { w, h } = getSize();
             const entryAlpha = 0.2;
             const entryAlphaInv = 1 - entryAlpha;
             const proximity = 20;
-            const distance = 5;
     
-            if(!mouseXY) {
+            if(!mouseXY || mouseXY.x < gap.x || mouseXY.y > (h - gap.y)) {
+                mouseTooltip.visible = false;
                 for(var xData in xTicks) {
                     const tick = xTicks[xData];
     
-                    tick._label.alpha = 0;
                     tick._line.alpha = 0;
                     tick._entries.alpha = entryAlpha;
                 }
             } else {
                 const {x, y} = mouseXY;
                 
+                ctx.updateMouseToolTip(x, y, w, h);
+                
                 for(var xData in xTicks) {
                     const tick = xTicks[xData];
     
                     const a = clamp( 1 - Math.abs(x - tick.x)/proximity, 0, 1);
     
-                    tick._label.alpha = a; // > 0.9 ? 1 : 0;
-                    tick._line.alpha = a;
                     tick._entries.alpha = entryAlpha + a * entryAlphaInv;
-    
-                    const aExpo = (a * 2)**2;
-                    tick._label.y = yZero + aExpo * distance;
+                    tick._line.alpha = a;
                     tick._line.scale.y = 1 + a;
                 }
             }
-        }
+        },
+
+        updateMouseToolTip(x:number, y:number, w:number, h:number) {
+            const mouseXData = xAxis.plotInverse(x);
+            const mouseYData = yAxis.plotInverse(y);
+            const xInt = x | 0;
+            const yInt = y | 0;
+
+            mouseTooltip.visible = true;
+            
+            const { _text, _graphics } = mouseTooltip;
+            _text.x = xInt;
+            _text.y = yInt;
+            _text.text = `${mouseYData}\n${mouseXData}`;
+            
+            _text.pivot.x = (x < w - _text.width) ? 0 : _text.width;
+            _text.pivot.y = (y < _text.height) ? 0 : _text.height;
+            
+            //Draw horizontal line to mouse:
+            _graphics.clear();
+            pixi.drawLine(_graphics, gap.x, yInt, xInt, yInt, 0x888888, 1);
+            pixi.drawLine(_graphics, xInt, yInt, xInt, h - gap.y, 0x888888, 1);
+        },
     }
 
     return ctx;

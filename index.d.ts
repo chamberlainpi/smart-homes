@@ -10,16 +10,19 @@ interface LineChartType {
     canvas:HTMLCanvasElement,
     $el:HTMLElement,
     pixi:any,
+    tooltipStyle?:Object
 }
 
 interface AxisType {
     label:string,
     evaluate?:Function,
+    evaluateInverse?:Function,
     boundsPixels:Array<number>,
     compareFunc:Function,
     tick:Function,
-    size:number,
+    fontSize:number,
     plot:Function,
+    plotInverse:Function
 }
 
 interface XYType {

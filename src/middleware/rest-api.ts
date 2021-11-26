@@ -4,7 +4,7 @@ import bodyParser from 'body-parser';
 import { db } from './utils/connect-db';
 import CONSTS from '../api.constants';
 import { getTime } from '../utils';
-import { simplifyWattageData } from '../utils.wattage.js';
+import { simplifyWattageData, fixTimezone } from '../utils.wattage.js';
 import dayjs from 'dayjs';
 
 const { ERROR_CODES, WATTAGE_READING } = CONSTS;
@@ -69,6 +69,7 @@ app.get('/readings/:offset?', async (req, res, next) => {
         });
     }
 
+    applyDateTimeFix( __ );
     logNow("Reading offset: " + offset);
     const { rows } = await queryOptions(req, `SELECT * FROM readings ORDER BY "DateTime" LIMIT ${WATTAGE_READING.LIMIT_PER_QUERY} OFFSET ${offset}`);
 
@@ -93,6 +94,7 @@ app.get('/readings/date/:dateStart', async (req, res, next) => {
         });
     }
     
+    applyDateTimeFix( __ );
     const toISO = (d:any) => d.toISOString(); //.replace('.000Z', '').replace('T',' ');
     const dateEnd = dateStart.add(WATTAGE_READING.SAMPLE_TIME_RANGE, WATTAGE_READING.SAMPLE_TIME_UNIT);
     const dateStartStr = toISO(dateStart);
@@ -166,5 +168,11 @@ app.get('/time-now', async (req, res, next) => {
     const serverDateTime = serverNow.toString();
     sendPretty(res, {databaseTime, serverTime, serverDateTime});
 })
+
+function applyDateTimeFix( __:any ) {
+    __.dbOptions.forEachRow = (row:any) => {
+        row.DateTime = fixTimezone(row.DateTime);
+    }
+}
 
 export default { path: '/api', handler: app };

@@ -1,4 +1,6 @@
-export function createPixiApp( pixiOptions ) {
+declare var PIXI:any;
+
+export function createPixiApp( pixiOptions:any ) {
     const app = new PIXI.Application({
         resolution: window.devicePixelRatio,
         // autoResize: true,
@@ -7,7 +9,7 @@ export function createPixiApp( pixiOptions ) {
     });
 
     app.stage.interactive = true;
-    app.stage.on('pointermove', e => {
+    app.stage.on('pointermove', (e:any) => {
         const {x, y} = e.data.global;
         context.mouse.x = x;
         context.mouse.y = y;
@@ -46,8 +48,6 @@ export function createPixiApp( pixiOptions ) {
 
             const { ticker } = app;
 
-            window.ticker = ticker;
-
             app.ticker.add(() => {
                 const w = app.renderer.width;
                 const h = app.renderer.height;
@@ -61,7 +61,7 @@ export function createPixiApp( pixiOptions ) {
             });
         },
 
-        createContainer(drawFunc) {
+        createContainer(drawFunc:Function) {
             const container = drawContext[drawContext.length - 1];
             const c = new PIXI.Container();
             container.addChild(c);
@@ -71,7 +71,7 @@ export function createPixiApp( pixiOptions ) {
             return c;
         },
 
-        drawGraphic(drawFunc) {
+        drawGraphic(drawFunc:Function) {
             const container = drawContext[drawContext.length - 1];
             const g = new PIXI.Graphics();
             container.addChild(g);
@@ -81,13 +81,13 @@ export function createPixiApp( pixiOptions ) {
             return g;
         },
 
-        drawLine(g, x1, y1, x2, y2, clr=0x000000, thickness=2) {
+        drawLine(g:any, x1:number, y1:number, x2:number, y2:number, clr=0x000000, thickness=2) {
             g.lineStyle(thickness, clr, 1);
             g.moveTo(x1, y1);
             g.lineTo(x2, y2);
         },
 
-        drawLabel(txt, x, y, opts) {
+        drawLabel(txt:string, x:number=0, y:number=0, opts:any) {
             const container = drawContext[drawContext.length - 1];
             const text = new PIXI.Text(txt, {
                 fontFamily : 'Arial',

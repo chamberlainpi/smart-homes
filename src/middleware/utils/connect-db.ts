@@ -37,7 +37,7 @@ export const db:DBType = {
 
     query(statement:string, opts={}) {
         const { client } = db;
-        const { nocache, req }:any = opts;
+        const { nocache, req, forEachRow }:any = opts;
         db.numQueries++;
         
         return new Promise(async (_then, _catch) => {
@@ -56,7 +56,12 @@ export const db:DBType = {
                 client.query(statement, async (err:Error, res:any) => {
                     if(err) return _catch(err);
                     
+                    if(forEachRow) {
+                        res.rows.forEach( forEachRow );
+                    }
+
                     if(!nocache) {
+                        trace("Caching...".magenta, res.rows[0].DateTime);
                         await fs.writeJson(hashPath, res.rows);
                     }
 

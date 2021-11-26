@@ -19,6 +19,7 @@ export default {
         yAxis: Object,
         xBounds: Array,
         yBounds: Array,
+        tooltipStyle: Object,
         tickEveryNth: Function,
     },
 

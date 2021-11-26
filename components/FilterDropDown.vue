@@ -12,8 +12,8 @@
 <script>
 
 import vSelect from 'vue-select';
-import { countItems } from '~/src/utils';
-import CountedItem from '~/components/CountedItem.vue';
+import { countItems } from '@/src/utils';
+import CountedItem from '@/components/CountedItem.vue';
 
 export default {
     components: {

@@ -105,8 +105,7 @@ export function getMinMaxDates( entries ) {
 export const simplifyWattageData = rows => {
     if(!rows || !rows.length) return {empty: true};
 
-    const fixTimezone = d => dayjs(d).subtract(d.getTimezoneOffset(), 'minute');
-    const preserveDate = d => d!=null && d.constructor === Date ? fixTimezone(d).toISOString() : d;
+    const preserveDate = d => d!=null && d.constructor === Date ? fixTimezone(d) : d;
     const keepDateFirst = (a, b) => b.indexOf('Date') - a.indexOf('Date');
     const keys = Object.keys(rows[0]).sort( keepDateFirst );
     const values = rows.map( r => keys.map( k => preserveDate(r[k]) ).join('|') );
@@ -116,4 +115,8 @@ export const simplifyWattageData = rows => {
         keys:  keys.join('|'),
         values
     };
+}
+
+export const fixTimezone = d => {
+    return dayjs(d).subtract(d.getTimezoneOffset(), 'minute').toISOString();
 }
