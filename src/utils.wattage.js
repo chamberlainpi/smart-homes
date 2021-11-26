@@ -26,8 +26,10 @@ export async function parseSimplifiedWattageData( wattageData ) {
     const { keys: keysPiped, values: valuesPiped } = wattageData;
     
     // const dateRegex = /^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/g;
-    const castData = d => {
+    const castData = (d, isNumber) => {
         if(!d || !d.length) return null;
+        if(isNumber) return parseFloat(d);
+
         // if(dateRegex.test(d)) return new Date(d);
         return d;
     }
@@ -35,6 +37,7 @@ export async function parseSimplifiedWattageData( wattageData ) {
     //Parse the data based on supplied *keys* and *values* that are pipe-delimited.
     const keys = keysPiped.split('|');
     const readings = [];
+    const numberTypes = 'Wattage';
 
     var timeLast = getTime();
     var timeFrames = 0;
@@ -45,7 +48,7 @@ export async function parseSimplifiedWattageData( wattageData ) {
         const vSplit = vPiped.split('|');
         for(var k in keys) {
             const key = keys[k];
-            reading[key] = castData(vSplit[k]);
+            reading[key] = castData(vSplit[k], numberTypes.includes(key));
         }
 
         readings.push( reading );

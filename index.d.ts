@@ -1,3 +1,5 @@
+declare module 'fs-extra';
+declare module 'pg';
 
 interface LineChartType {
     xAxis:AxisType,

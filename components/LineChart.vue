@@ -1,7 +1,7 @@
 <template>
     <div class="line-chart relative" :style="{width, height}">
         <canvas ref="canvas"></canvas>
-        <div ref="spinner-wrapper" class="absolute block inset-0 bg-black bg-opacity-50 centered">
+        <div ref="spinner-wrapper" class="absolute block inset-0 bg-black bg-opacity-50 centered pointer-events-none">
             <i ref="spinner-icon" class="fa fa-circle-notch text-4xl text-white"></i>
         </div>
     </div>

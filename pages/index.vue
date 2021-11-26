@@ -24,7 +24,7 @@
         <h3 class="inline-block">Offset:</h3>
         
         <div class="offset-buttons flex items-center justify-center gap-2">
-          <span class="text-blue-400 whitespace-nowrap w-44">{{offsetDayCurrentFormatted}}</span>
+          <span class="text-blue-400 whitespace-nowrap w-44 font-mono">{{offsetTimeCurrentFormatted}}</span>
           <button class="btn btn-sm fa fa-plus" @click="changeOffset(1)"></button>
           <button class="btn btn-sm fa fa-minus" @click="changeOffset(-1)"></button>
         </div>
@@ -32,7 +32,7 @@
         <input class="slider flex-grow"
             type="range"
             min="0"
-            :max="offsetDayRange"
+            :max="offsetTimeRange"
             v-model.number="offset"
             @change="onOffsetChanged">
       </div>
@@ -41,7 +41,7 @@
         width="100%"
         height="400px"
         :entries="filteredReadings"
-        :xBounds="offsetDayBounds"
+        :xBounds="offsetTimeBounds"
         :yBounds="wattageLimits"
         :xAxis="{
           label: 'Time',
@@ -65,11 +65,14 @@ import '@/src/extensions';
 import 'vue-select/dist/vue-select.css';
 import Vue from 'vue';
 import dayjs from 'dayjs';
+import CONSTS from '@/src/api.constants';
 import LineChart from '~/components/LineChart.vue';
 import CountedItem from '~/components/CountedItem.vue';
 import FilterDropDown from '~/components/FilterDropDown.vue';
-import { getCountSortFunc, clamp, _ } from '@/src/utils';
+import { getCountSortFunc, clamp, _, queryParams } from '@/src/utils';
 import { organizeReadings, parseSimplifiedWattageData, generateMockupData } from '~/src/utils.wattage';
+
+const { WATTAGE_READING } = CONSTS;
 
 export default Vue.extend({
   components: {
@@ -113,22 +116,23 @@ export default Vue.extend({
       return filtered;
     },
 
-    offsetDayBounds() {
-      const dayNow = this.offsetDayCurrent;
-      if(!dayNow.isValid()) return [null, null];
-      return [dayNow.toISOString(), dayNow.add(1, 'hour').toISOString()];
+    offsetTimeBounds() {
+      const now = this.offsetTimeCurrent;
+      if(!now.isValid()) return [null, null];
+      return [now.toISOString(), now.add(2, WATTAGE_READING.OFFSET_TIME_UNIT).toISOString()];
     },
 
-    offsetDayCurrentFormatted() {
-      return this.offsetDayCurrent.format('YYYY-MM-DD HH:mm:ss');
+    offsetTimeCurrentFormatted() {
+      return this.offsetTimeCurrent.format('YYYY-MM-DD HH:mm:ss');
     },
 
-    offsetDayCurrent() {
-      return dayjs(this.dateLimits.min).add(this.offset, 'day');
+    offsetTimeCurrent() {
+      return dayjs(this.dateLimits.min).add(this.offset, WATTAGE_READING.OFFSET_TIME_UNIT);
     },
 
-    offsetDayRange() {
-      return dayjs(this.dateLimits.max).diff(this.dateLimits.min, 'day');
+    offsetTimeRange() {
+      //Get a more granular offset (ex: hour or minutes) that we can scrub the graph through to see the overlaps better:
+      return dayjs(this.dateLimits.max).diff(this.dateLimits.min, WATTAGE_READING.OFFSET_TIME_UNIT);
     },
   },
 
@@ -163,11 +167,10 @@ export default Vue.extend({
       this.deviceIds = deviceIds;
       this.dateLimits = dateLimits;
       this.wattageLimits = [0, parseFloat(wattageLimits.max)];
-      trace("..........", this.wattageLimits);
     },
 
     async fetchWattageReadings() {
-      if(this.offsetDayCurrentFormatted === 'Invalid Date') return;
+      if(this.offsetTimeCurrentFormatted === 'Invalid Date') return;
 
       if(this.isBusy) return;
 
@@ -175,10 +178,11 @@ export default Vue.extend({
 
       const ENDPOINTS = {
         TEST: './api/readings/' + this.offset,
-        PROD: './api/readings/date/' + this.offsetDayCurrentFormatted
+        PROD: './api/readings/date/' + this.offsetTimeCurrentFormatted
       };
 
-      const wattageData = await fetch(ENDPOINTS.TEST).then( res => res.json() );
+      const nocache = 'nocache' in queryParams() ? '?nocache=1' : '';
+      const wattageData = await fetch(ENDPOINTS.PROD + nocache).then( res => res.json() );
       this.wattageReadings = await parseSimplifiedWattageData( wattageData );
 
       //Sort the filters for Serial_Number and Device_ID by # of hits [their total numbers in (#) parentheses]
@@ -190,7 +194,6 @@ export default Vue.extend({
   },
 
   async mounted() {
-    
     const { mockupEntries, mockupBounds } = generateMockupData(100);
     this.mockupEntries = mockupEntries;
     this.mockupBounds = mockupBounds;
@@ -204,4 +207,5 @@ export default Vue.extend({
     await this.fetchWattageReadings();
   }
 })
+
 </script>

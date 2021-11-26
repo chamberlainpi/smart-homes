@@ -4,8 +4,9 @@ import sortBy from 'lodash/sortBy';
 import uniq from 'lodash/uniq';
 import uniqBy from 'lodash/uniqBy';
 import times from 'lodash/times';
+import trim from 'lodash/trim';
 
-export const _ = { forOwn, debounce, sortBy, uniq, uniqBy, times };
+export const _ = { forOwn, debounce, sortBy, uniq, uniqBy, times, trim };
 
 export const clamp = (v, min, max) => v < min ? min : (v > max ? max : v);
 
@@ -25,3 +26,15 @@ export const defer = () => new Promise( _then => {
 });
 
 export const getTime = () => new Date().getTime();
+
+export const queryParams = q => {
+    if(!q) q = window.location.search;
+    const params = new URLSearchParams(q);
+    const results = {};
+    
+    params.forEach((value, key) => {
+        results[key] = value;
+    });
+
+    return results;
+}

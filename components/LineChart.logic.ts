@@ -7,6 +7,8 @@ const gap:XYType = {x: 50, y: 50};
 const deg2rad:number = Math.PI / 180;
 const identity = (a:any) => a;
 
+export default null;
+
 export function setupLineChart(_this:LineChartType) {
     let pixi:any;
     let guideUI:any;
@@ -49,10 +51,10 @@ export function setupLineChart(_this:LineChartType) {
         },
 
         async updateChart(skipInit=false) {
-            events.emit('busy');
-            
             !skipInit && ctx.initEntries();
-    
+            
+            trace("----updateChart", _this.entries);
+
             await ctx.adjustGuides();
             await ctx.adjustEntries();
             ctx.onMouseMove();
@@ -71,6 +73,8 @@ export function setupLineChart(_this:LineChartType) {
         },
 
         initEntries() {
+            events.emit('busy');
+            
             /**
              * Reason that we "init" the entries and not simply "draw" them right away
              * is to prepare each one belonging to a given timestamp to render on a PIXI.Container.
@@ -117,7 +121,7 @@ export function setupLineChart(_this:LineChartType) {
                 tick._label.y = 0; yAxis.plot(0);
     
                 tick._entries.clear();
-                tick._entries.beginFill(0xff0000);
+                tick._entries.beginFill(0xff0000, 1);
             }
     
             for(var e in _this.entries) {
@@ -167,13 +171,14 @@ export function setupLineChart(_this:LineChartType) {
                 tick._entries.clear();
                 tick._entries.beginFill(0xff0000);
             }
-    
+
             for(var e in _this.entries) {
                 var entry = _this.entries[e];
                 const xData = xAxis.compareFunc(entry);
                 const yData = yAxis.compareFunc(entry);
                 const xTick = xTicks[xData];
-    
+                
+                xTick._entries.beginFill(0xff0000, 1);
                 xTick._entries.drawCircle(0, yAxis.plot(yData), 2);
             }
         },

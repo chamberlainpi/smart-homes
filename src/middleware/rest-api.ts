@@ -1,5 +1,5 @@
 import '../extensions.js';
-import express from 'express';
+import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import { db } from './utils/connect-db';
 import CONSTS from '../api.constants';
@@ -8,15 +8,19 @@ import { simplifyWattageData } from '../utils.wattage.js';
 import dayjs from 'dayjs';
 
 const { ERROR_CODES, WATTAGE_READING } = CONSTS;
-const logNow = msg => trace( `${new Date().toISOString()} - ${msg}`);
-const sendError = (res, err) => {
+
+const logNow = (msg:any) => trace( `${new Date().toISOString()} - ${msg}`);
+
+const sendError = (res:Response, err:any) => {
     logNow(err.error);
     res.status(400).json(err);
 }
 
-const sendPretty = (res, data) => {
+const sendPretty = (res:Response, data:any) => {
     res.type('json').end( JSON.stringify(data, null, '  ') );
 }
+
+const queryOptions = async (req:Request, statement:string) => await db.query(statement, (req as any).__.dbOptions);
 
 const app = express();
 app.use( bodyParser.json() );
@@ -29,15 +33,16 @@ app.get('/', (req, res) => {
 });
 
 app.all('/*', async (req, res, next) => {
-    const __ = req.__ = {}; //Toss any private data here;
-
+    //Toss any private data here;
+    const __:any = (req as any).__ = {};
     __.timeStart = getTime();
+    __.dbOptions = {req, nocache: !!req.query.nocache};
 
     if(!db.isConnected) {
         await db.connect();
         logNow(`Connected to the DB on port: ${db.creds.port}`);
     }
-    
+
     next();
 });
 
@@ -47,15 +52,15 @@ app.get('/test', (req, res, next) => {
 });
 
 app.get('/total', async (req, res, next) => {
-    const { rows } = await db.query(`SELECT COUNT(*) FROM readings`);
+    const { rows } = await queryOptions(req, `SELECT COUNT(*) FROM readings`);
 
     res.json(rows);
 });
 
 app.get('/readings/:offset?', async (req, res, next) => {
-    const { __ } = req;
+    const { __ } = req as any;
 
-    const offset = parseInt(req.params.offset ?? 0);
+    const offset = parseInt(req.params.offset ?? '0');
     if(isNaN(offset) || offset < 0) {
         return sendError(res, {
             error: 'Wattage Readings offset should be 0 or greater (or omitted, defaults to 0), got: ' + offset,
@@ -64,7 +69,7 @@ app.get('/readings/:offset?', async (req, res, next) => {
     }
 
     logNow("Reading offset: " + offset);
-    const { rows } = await db.query(`SELECT * FROM readings ORDER BY "DateTime" LIMIT ${WATTAGE_READING.LIMIT_PER_QUERY} OFFSET ${offset}`);
+    const { rows } = await queryOptions(req, `SELECT * FROM readings ORDER BY "DateTime" LIMIT ${WATTAGE_READING.LIMIT_PER_QUERY} OFFSET ${offset}`);
 
     __.timeDiff = getTime() - __.timeStart;
     const simplified = simplifyWattageData(rows);
@@ -76,7 +81,7 @@ app.get('/readings/:offset?', async (req, res, next) => {
 });
 
 app.get('/readings/date/:dateStart', async (req, res, next) => {
-    const { __ } = req;
+    const { __ } = req as any;
 
     const dateStart = dayjs(req.params.dateStart || '');
     if(!dateStart || !dateStart.isValid()) {
@@ -86,28 +91,28 @@ app.get('/readings/date/:dateStart', async (req, res, next) => {
         });
     }
 
-    const dateEnd = dateStart.add(WATTAGE_READING.LIMIT_DAYS_RANGE, 'day');
+    const dateEnd = dateStart.add(WATTAGE_READING.OFFSET_TIME_RANGE, WATTAGE_READING.OFFSET_TIME_UNIT);
     const dateStartStr = dateStart.toISOString();
     const dateEndStr = dateEnd.toISOString();    
 
     const q = `SELECT * FROM readings WHERE "DateTime" BETWEEN '${dateStartStr}' AND '${dateEndStr}' ORDER BY "DateTime"`;
-    logNow("Reading query: ", q);
-
+    
     try {
-        const { rows } = await db.query(q);
+        const { rows } = await queryOptions(req, q);
 
         __.timeDiff = getTime() - __.timeStart;
 
         const simplified = simplifyWattageData(rows);
+        const plural = WATTAGE_READING.OFFSET_TIME_UNIT + (WATTAGE_READING.OFFSET_TIME_RANGE > 1 ? 's' : '');
 
         sendPretty(res, {
             timeToQueryMS: __.timeDiff,
             dateStart: dateStartStr,
             dateEnd: dateEndStr,
-            days: WATTAGE_READING.LIMIT_DAYS_RANGE,
+            timeRange: `${WATTAGE_READING.OFFSET_TIME_RANGE} ${plural}`,
             ... simplified
         });
-    } catch(err) {
+    } catch(err:any) {
         sendError(res, {
             error: err.toString(),
             q,
@@ -117,20 +122,17 @@ app.get('/readings/date/:dateStart', async (req, res, next) => {
 });
 
 app.get('/init-data', async (req, res, next) => {
-    const getDistinct = async distinctField => {
-        logNow(`>>> ${distinctField}`);
-        const { rows } = await db.query(`SELECT DISTINCT "${distinctField}" FROM readings LIMIT ${WATTAGE_READING.LIMIT_SERIAL_NUMBERS}`);
-        logNow(`  < ${distinctField}`);
-
-        return rows.map( r => r[distinctField] );
-    }
+    const getDistinct = async (distinctField:string) => {
+        const { rows } = await queryOptions(req, `SELECT DISTINCT "${distinctField}" FROM readings LIMIT ${WATTAGE_READING.LIMIT_SERIAL_NUMBERS}`);
+        return rows.map( (r:any) => r[distinctField] );
+    };
     
     const serialNumbers = await getDistinct('Serial_Number');
     const deviceIds = await getDistinct('Device_ID');
-    const { rows: rowsDate } = await db.query(`SELECT min("DateTime") as min_date, max("DateTime") as max_date FROM readings`);
+    const { rows: rowsDate } = await queryOptions(req, `SELECT min("DateTime") as min_date, max("DateTime") as max_date FROM readings`);
     const { min_date, max_date } = rowsDate[0];
 
-    const { rows: rowsWatts } = await db.query(`SELECT min("Wattage") as min_watts, max("Wattage") as max_watts FROM readings`);
+    const { rows: rowsWatts } = await queryOptions(req, `SELECT min("Wattage") as min_watts, max("Wattage") as max_watts FROM readings`);
     const { min_watts, max_watts } = rowsWatts[0];
 
     const data = {
