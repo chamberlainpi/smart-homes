@@ -43,21 +43,26 @@ export const db:DBType = {
         return new Promise(async (_then, _catch) => {
             const hashFile = resolveCacheFile(req, statement);
             const hashPath = path.join(privatePath, hashFile);
+            const hashPathShort = '.\\' + hashPath.split('.private\\').pop();
+            const useCache = !nocache && fs.existsSync(hashPath);
+            const logLine = ` [${useCache ? 'CACHED' : 'FROM-DB'}] ${hashPathShort}`
             
-            if(nocache || !fs.existsSync(hashPath)) {
-                trace(" --- ", hashPath.gray);
+            
+            if(useCache) {
+                const rows = await fs.readJson(hashPath);
+                trace(logLine.green, `count: ${rows.length}`);
+                _then({ rows });
+            } else {
                 client.query(statement, async (err:Error, res:any) => {
                     if(err) return _catch(err);
                     
                     if(!nocache) {
                         await fs.writeJson(hashPath, res.rows);
                     }
+
+                    trace(logLine.gray, `count: ${res.rows.length}`);
                     _then(res);
                 });
-            } else {
-                trace(" --- ", hashPath.green, '[CACHED]');
-                const rows = await fs.readJson(hashPath);
-                _then({ rows });
             }
         });
     },

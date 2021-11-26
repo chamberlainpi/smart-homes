@@ -186,7 +186,7 @@ export function setupLineChart(_this:LineChartType) {
             }
 
             const output = $toString('\n', ' ');
-            trace(output);
+            //trace(output);
         },
     
         drawMainGuides() {

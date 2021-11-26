@@ -32,16 +32,17 @@
         <input class="slider flex-grow"
             type="range"
             min="0"
-            :max="offsetTimeRange"
+            :max="offsetMax"
             v-model.number="offset"
             @change="onOffsetChanged">
+        <i>{{offsetMax}}</i>
       </div>
 
       <LineChart class="test-mockup border border-gray-300"
         width="100%"
         height="400px"
         :entries="filteredReadings"
-        :xBounds="offsetTimeBounds"
+        :xBounds="sampleTimeBounds"
         :yBounds="wattageLimits"
         :xAxis="{
           label: 'Time',
@@ -72,7 +73,7 @@ import FilterDropDown from '~/components/FilterDropDown.vue';
 import { getCountSortFunc, clamp, _, queryParams } from '@/src/utils';
 import { organizeReadings, parseSimplifiedWattageData, generateMockupData } from '~/src/utils.wattage';
 
-const { WATTAGE_READING } = CONSTS;
+const { OFFSET_TIME_RANGE, OFFSET_TIME_UNIT, SAMPLE_TIME_UNIT, SAMPLE_TIME_RANGE } = CONSTS.WATTAGE_READING;
 const nocache = process.browser && 'nocache' in queryParams() ? '?nocache=1' : '';
 const fetchCacheAware = url => fetch(url + nocache);
 
@@ -118,23 +119,38 @@ export default Vue.extend({
       return filtered;
     },
 
-    offsetTimeBounds() {
-      const now = this.offsetTimeCurrent;
-      if(!now.isValid()) return [null, null];
-      return [now.toISOString(), now.add(2, WATTAGE_READING.OFFSET_TIME_UNIT).toISOString()];
+    sampleTimeBounds() {
+      const sampleStart = this.offsetTimeCurrent;
+      if(!sampleStart.isValid()) return [null, null];
+      const sampleEnd = sampleStart.add(SAMPLE_TIME_RANGE, SAMPLE_TIME_UNIT);
+      return [sampleStart.toISOString(), sampleEnd.toISOString()];
     },
 
     offsetTimeCurrentFormatted() {
-      return this.offsetTimeCurrent.format('YYYY-MM-DD HH:mm:ss');
+      return this.offsetTimeCurrent.toISOString().replace(/(T|\.000Z)/g, ' ').trim();
     },
 
     offsetTimeCurrent() {
-      return dayjs(this.dateLimits.min).add(this.offset, WATTAGE_READING.OFFSET_TIME_UNIT);
+      var dayMin = dayjs(this.dateLimits.min);
+      if(!dayMin.isValid()) return dayjs();
+      return dayjs(this.dateLimits.min).add(this.offset * OFFSET_TIME_RANGE, OFFSET_TIME_UNIT);
     },
 
-    offsetTimeRange() {
+    offsetMax() {
+      if(!this.dateLimits.min) return 0;
       //Get a more granular offset (ex: hour or minutes) that we can scrub the graph through to see the overlaps better:
-      return dayjs(this.dateLimits.max).diff(this.dateLimits.min, WATTAGE_READING.OFFSET_TIME_UNIT);
+      const maxDate = dayjs(this.dateLimits.max)
+        .subtract(SAMPLE_TIME_RANGE*2, SAMPLE_TIME_UNIT);
+      
+      const max = maxDate.diff(this.dateLimits.min, OFFSET_TIME_UNIT) / OFFSET_TIME_RANGE;
+      trace("?????",
+        this.dateLimits.min,
+        this.dateLimits.max,
+        maxDate.toISOString(),
+        max,
+        dayjs(this.dateLimits.max).diff(this.dateLimits.min, OFFSET_TIME_UNIT)
+      );
+      return max;
     },
   },
 
@@ -162,7 +178,7 @@ export default Vue.extend({
     },
 
     async fetchInitialData() {
-      const initData = await fetchCacheAware('./api/init-data').then( res => res.json() );
+      const initData = await fetchCacheAware('./api/init-data?nocache').then( res => res.json() );
       const { dateLimits, wattageLimits, serialNumbers, deviceIds } = initData;
 
       this.serialNumbers = serialNumbers;
@@ -174,19 +190,21 @@ export default Vue.extend({
     },
 
     async fetchWattageReadings() {
-      if(this.offsetTimeCurrentFormatted === 'Invalid Date') return;
-
-      if(this.isBusy) return;
+      if(this.isBusy || !this.offsetTimeCurrent.isValid()) return;
 
       this.isBusy = true;
 
       const ENDPOINTS = {
         TEST: './api/readings/' + this.offset,
-        PROD: './api/readings/date/' + this.offsetTimeCurrentFormatted
+        PROD: './api/readings/date/' + this.offsetTimeCurrent.toISOString()
       };
 
       const wattageData = await fetchCacheAware(ENDPOINTS.PROD).then( res => res.json() );
-      this.wattageReadings = await parseSimplifiedWattageData( wattageData );
+      if(wattageData.empty) {
+        this.wattageReadings = [];
+      } else {
+        this.wattageReadings = await parseSimplifiedWattageData( wattageData );
+      }
 
       //Sort the filters for Serial_Number and Device_ID by # of hits [their total numbers in (#) parentheses]
       this.serialNumbers = this.serialNumbers.sort( this._countSortBySerialNumber );

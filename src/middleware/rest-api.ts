@@ -35,7 +35,8 @@ app.get('/', (req, res) => {
 app.all('/*', async (req, res, next) => {
     //Toss any private data here;
     const __:any = (req as any).__ = {};
-    __.timeStart = getTime();
+    __.dateRequested = new Date();
+    __.timeStart = __.dateRequested.getTime();
     __.dbOptions = {req, nocache: !!req.query.nocache};
 
     if(!db.isConnected) {
@@ -84,18 +85,25 @@ app.get('/readings/date/:dateStart', async (req, res, next) => {
     const { __ } = req as any;
 
     const dateStart = dayjs(req.params.dateStart || '');
+    
     if(!dateStart || !dateStart.isValid()) {
         return sendError(res, {
             error: `Wattage Readings 'dateStart' param is required and must be in the format YYYY-MM-DD, got: ${dateStart}`,
             code: ERROR_CODES.WATTAGE_OFFSET_INVALID
         });
     }
-
-    const dateEnd = dateStart.add(WATTAGE_READING.OFFSET_TIME_RANGE, WATTAGE_READING.OFFSET_TIME_UNIT);
-    const dateStartStr = dateStart.toISOString();
-    const dateEndStr = dateEnd.toISOString();    
-
-    const q = `SELECT * FROM readings WHERE "DateTime" BETWEEN '${dateStartStr}' AND '${dateEndStr}' ORDER BY "DateTime"`;
+    
+    const toISO = (d:any) => d.toISOString(); //.replace('.000Z', '').replace('T',' ');
+    const dateEnd = dateStart.add(WATTAGE_READING.SAMPLE_TIME_RANGE, WATTAGE_READING.SAMPLE_TIME_UNIT);
+    const dateStartStr = toISO(dateStart);
+    const dateEndStr = toISO(dateEnd);
+    
+    const q = [
+        `SELECT * FROM readings`,
+        `WHERE "DateTime" >= '${dateStartStr}'`,
+        `AND "DateTime" < '${dateEndStr}'`,
+        `ORDER BY "DateTime"`
+    ].join(' ');
     
     try {
         const { rows } = await queryOptions(req, q);
@@ -103,13 +111,14 @@ app.get('/readings/date/:dateStart', async (req, res, next) => {
         __.timeDiff = getTime() - __.timeStart;
 
         const simplified = simplifyWattageData(rows);
-        const plural = WATTAGE_READING.OFFSET_TIME_UNIT + (WATTAGE_READING.OFFSET_TIME_RANGE > 1 ? 's' : '');
+        const plural = WATTAGE_READING.SAMPLE_TIME_UNIT + (WATTAGE_READING.SAMPLE_TIME_RANGE > 1 ? 's' : '');
 
         sendPretty(res, {
             timeToQueryMS: __.timeDiff,
+            timeRange: `${WATTAGE_READING.SAMPLE_TIME_RANGE} ${plural}`,
+            dateRequested: __.dateRequested,
             dateStart: dateStartStr,
             dateEnd: dateEndStr,
-            timeRange: `${WATTAGE_READING.OFFSET_TIME_RANGE} ${plural}`,
             ... simplified
         });
     } catch(err:any) {
@@ -145,5 +154,17 @@ app.get('/init-data', async (req, res, next) => {
 
     sendPretty(res, data);
 });
+
+app.get('/time-now', async (req, res, next) => {
+    const { __ } = req as any;
+    __.dbOptions.nocache = true; //Never cache the DB server-time!
+
+    const { rows } = await queryOptions(req, `SELECT NOW()`);
+    const databaseTime = rows[0].now;
+    const serverNow = new Date();
+    const serverTime = serverNow.toISOString();
+    const serverDateTime = serverNow.toString();
+    sendPretty(res, {databaseTime, serverTime, serverDateTime});
+})
 
 export default { path: '/api', handler: app };
