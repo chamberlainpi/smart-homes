@@ -6,6 +6,9 @@ import uniqBy from 'lodash/uniqBy';
 import times from 'lodash/times';
 import trim from 'lodash/trim';
 
+export const trace = console.log.bind(this);
+export const prettyJSON = d => JSON.stringify(d, null, '  ');
+
 export const _ = { forOwn, debounce, sortBy, uniq, uniqBy, times, trim };
 
 export const clamp = (v, min, max) => v < min ? min : (v > max ? max : v);

@@ -63,7 +63,6 @@
 </template>
 
 <script>
-import '@/src/extensions';
 import 'vue-select/dist/vue-select.css';
 import Vue from 'vue';
 import dayjs from 'dayjs';
@@ -71,7 +70,7 @@ import CONSTS from '@/src/api.constants';
 import LineChart from '@/components/LineChart.vue';
 import CountedItem from '@/components/CountedItem.vue';
 import FilterDropDown from '@/components/FilterDropDown.vue';
-import { getCountSortFunc, clamp, _, queryParams } from '@/src/utils';
+import { _, trace, getCountSortFunc, clamp, queryParams } from '@/src/utils';
 import { organizeReadings, parseSimplifiedWattageData, generateMockupData } from '@/src/utils.wattage';
 
 const { OFFSET_TIME_RANGE, OFFSET_TIME_UNIT, SAMPLE_TIME_UNIT, SAMPLE_TIME_RANGE } = CONSTS.WATTAGE_READING;

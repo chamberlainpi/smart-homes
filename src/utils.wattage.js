@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import Chance from 'chance';
-import { _, defer, getTime } from './utils';
+import { _, defer, getTime, trace } from './utils';
 
 export function organizeReadings( readings ) {
     const organized = { Serial_Number: {}, Device_ID: {} };

@@ -1,9 +1,8 @@
-import '../extensions.js';
 import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
 import { db } from './utils/connect-db';
 import CONSTS from '../api.constants';
-import { getTime } from '../utils';
+import { trace, getTime } from '../utils';
 import { simplifyWattageData, fixTimezone } from '../utils.wattage.js';
 import dayjs from 'dayjs';
 

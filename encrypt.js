@@ -1,5 +1,5 @@
 //A very simple encryption for the DB creds details:
-import './src/extensions.js';
+import { trace } from './src/utils';
 import fs from 'fs/promises';
 
 (async function() {

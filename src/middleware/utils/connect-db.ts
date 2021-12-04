@@ -1,4 +1,4 @@
-import { _ } from '../../utils';
+import { _, trace } from '../../utils';
 import { Client } from 'pg';
 import fs from 'fs-extra';
 import path from 'path';
