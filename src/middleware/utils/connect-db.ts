@@ -15,6 +15,8 @@ const resolveCacheFile = (req:Request, statement:string) => {
     return `${prefix}_${hashStatement}.json`;
 }
 
+const atob = (str:string) => Buffer.from(str, 'base64').toString();
+
 export const db:DBType = {
     isConnected: false,
     numQueries: 0,
